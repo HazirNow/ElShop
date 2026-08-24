@@ -1,0 +1,376 @@
+import { Language, ProductCategory } from './types';
+
+export const categoryTranslations: Record<ProductCategory, { en: string; ar: string }> = {
+  'Dairy & Eggs': { en: 'Dairy & Eggs', ar: 'الألبان والبيض' },
+  'Bakery': { en: 'Bakery', ar: 'المخبوزات' },
+  'Beverages': { en: 'Beverages', ar: 'المشروبات' },
+  'Pantry': { en: 'Pantry', ar: 'المؤن والزيوت' },
+  'Snacks': { en: 'Snacks', ar: 'المأكولات الخفيفة' },
+  'Fresh Produce': { en: 'Fresh Produce', ar: 'خضار وفواكه طازجة' },
+};
+
+export function getCategoryName(category: string, lang: Language): string {
+  if (category === 'All' || category === 'الكل') {
+    return lang === 'ar' ? 'الكل' : 'All';
+  }
+  if (
+    category === 'On Sale' ||
+    category === '🔥 On Sale' ||
+    category === '🔥 Special Offers' ||
+    category === '🔥 العروض الخاصّة'
+  ) {
+    return lang === 'ar' ? '🔥 العروض الخاصّة' : '🔥 Special Offers';
+  }
+  const match = categoryTranslations[category as ProductCategory];
+  if (match) {
+    return lang === 'ar' ? match.ar : match.en;
+  }
+  return category;
+}
+
+export const dictionary = {
+  en: {
+    appName: 'ElShop',
+    appTagline: 'UAE Neighborhood Grocery Engine',
+    roles: {
+      customer: 'Customer View',
+      merchant: 'Merchant Tablet',
+      rider: 'Runner App (Walk / Bicycle)',
+      admin: 'HQ Admin',
+    },
+    resetData: 'Reset Demo Data',
+    resetConfirm: 'Reset all database state to initial seed?',
+    storeSelectLabel: 'Active Store:',
+    currency: 'AED',
+    
+    // Customer
+    catalogBtn: 'Catalog',
+    online: 'Online • Neighborhood Store',
+    typeMessage: 'Type a message to the store...',
+    addToCart: 'Add',
+    outOfStock: 'Out of Stock',
+    cartTitle: 'Your Grocery Cart',
+    subtotal: 'Subtotal',
+    deliveryFee: 'Delivery Fee',
+    freeDeliveryUnlocked: 'Free Delivery Unlocked!',
+    deliveryFeeNotice: 'Orders under 25 AED include a 3.50 AED delivery fee',
+    checkout: 'Proceed to Checkout',
+    deliveryAddress: 'Delivery Address',
+    buildingName: 'Building Name',
+    unitNumber: 'Apartment / Unit Number',
+    customerNotes: 'Special Instructions / Notes',
+    customerProfile: 'Customer Account',
+    paymentMethod: 'Payment Method',
+    cashOnDelivery: 'Cash on Delivery',
+    cardTerminal: 'Card Payment (Tap Mobile POS)',
+    khataBook: 'Store Credit (Monthly Ledger)',
+    khataApprovedNotice: 'Pre-approved for Store Credit',
+    khataNotApprovedNotice: 'Store Credit requires prior pre-approval from store merchant',
+    placeOrder: 'Place Order & Open WhatsApp',
+    sendWhatsAppOrder: 'Send Order Summary via WhatsApp',
+    chatOnWhatsApp: 'Chat',
+    notifyCustomerWhatsApp: 'WhatsApp Customer',
+    sendKhataWhatsApp: 'Send Store Credit Balance via WhatsApp',
+    orderTracking: 'Live Order Tracking',
+    statusPlaced: 'Placed',
+    statusPacking: 'Packing',
+    statusOutForDelivery: 'Out for Delivery',
+    statusDelivered: 'Delivered',
+    simulatedCardTitle: 'Tap Card or Phone on Terminal',
+    simulatedCardDesc: 'Hold card near terminal to complete 25.00+ AED contactless payment',
+    simulatingPayment: 'Processing NFC Payment...',
+    paymentSuccess: 'Payment Approved!',
+
+    // Merchant
+    orderBoard: 'Order Board',
+    inventory: 'Inventory & Stock',
+    settlement: 'Runner Cash Settlement',
+    newOrders: 'New Orders',
+    packing: 'Packing',
+    outForDelivery: 'Out for Delivery',
+    acceptOrder: 'Accept Order',
+    batchSuggestion: 'Batch Suggestion:',
+    batchText: '2+ orders for {building} - Dispatch together?',
+    batchBtn: 'Batch Orders',
+    orderDetail: 'Order Checklist & Dispatch',
+    customerNoteAlert: 'Customer Note:',
+    checklistTitle: 'Item Packing Checklist',
+    dispatchToRider: 'Dispatch to Store Runner',
+    selectRider: 'Select Neighborhood Runner:',
+    stockManagement: 'Stock Management',
+    toggleInStock: 'In Stock',
+    toggleOutOfStock: 'Mark Out of Stock',
+    cashSettlementTitle: 'Store Runner Cash Collection & Settlement',
+    expectedCash: 'Expected Cash',
+    actualCashHandedIn: 'Actual Cash Handed In',
+    variance: 'Variance',
+    approveSettlement: 'Approve Settlement',
+    flagDispute: 'Flag Cash Dispute',
+    disputeFlagged: 'Cash Dispute Flagged!',
+    
+    // New Catalog, Sale & Supplier Management
+    addProduct: 'Add New Product',
+    manageSale: 'Manage Sale Price',
+    onSaleTag: '🔥 Special Offers',
+    lowStockTab: '🚨 Low Stock Alert',
+    lowStockAlertTitle: 'Low Stock Replenishment Alert',
+    lowStockAlertDesc: '{count} item(s) have fallen below replenishment threshold (< {threshold} units).',
+    lowStockThreshold: 'Alert Threshold (Units)',
+    setAlertThreshold: 'Set Alert Threshold',
+    defaultThresholdLabel: 'Default Alert Limit',
+    toggleAlerts: 'Low-Stock Alerts',
+    alertsMuted: 'Alerts Muted',
+    alertsActive: 'Alerts Active',
+    dismissAlert: 'Close Alert',
+    reopenAlert: 'Show Alert',
+    restockQuick: 'Quick Restock',
+    unitsCount: 'Units',
+    reorderSupplier: 'Reorder from Supplier',
+    suppliersTitle: 'Supplier Contacts & Ordering',
+    addSupplier: 'Add New Supplier',
+    removeSupplier: 'Remove Supplier',
+    supplierName: 'Supplier / Distributor Name',
+    supplierPhone: 'Supplier WhatsApp / Phone',
+    noSupplierAssigned: 'No Supplier Assigned',
+    reorderMessageTemplate: 'Hello {supplierName}! Please reorder {qty} units of {productName} for {storeName}. Thank you!',
+
+    // Rider / Runner
+    riderMode: 'Neighborhood Runner Task List (Walk / Bicycle)',
+    activeStops: 'Active Delivery Stops',
+    cashToCollect: 'Total Cash to Collect',
+    swipeToDeliver: 'Swipe to Confirm Delivered',
+    confirmDelivery: 'Confirm Delivery',
+    paymentType: 'Payment Type',
+    collectCash: 'COLLECT CASH',
+    cardPaid: 'CARD PREPAID',
+    khataBooked: 'STORE CREDIT DEBITED',
+
+    // Admin
+    adminDashboard: 'Executive Network Operations',
+    activeStores: 'Active Grocery Stores',
+    ordersToday: 'Orders Completed Today',
+    pendingDisputes: 'Pending Cash Disputes',
+    storeTableTitle: 'Store Performance Overview',
+    storeName: 'Store Name',
+    area: 'Area / Neighborhood',
+    todayOrders: 'Today Orders',
+    monthlyOrders: 'Monthly Volume',
+    disputeStatus: 'Dispute Flag',
+    economicsTitle: 'Store Subscription & Economics',
+    breakEvenConfig: 'Configurable Break-Even Order Threshold:',
+    breakEvenOrders: 'Break-Even Threshold ({count} orders/mo)',
+    aboveBreakEven: 'Profitable / Above Break-Even',
+    belowBreakEven: 'Below Break-Even Volume',
+    subscriptionStatus: '299 AED/mo Subscription Active',
+
+    // New Store Creation & Billing Governance
+    onboardStoreBtn: 'Onboard New Store',
+    createNewStoreTitle: 'Onboard & Register New Grocery Store',
+    storeNameEn: 'Store Name (English)',
+    storeNameAr: 'Store Name (Arabic)',
+    assignedWhatsapp: 'Merchant WhatsApp Number',
+    merchantManagerName: 'Merchant / Owner Name',
+    storePhone: 'Landline / Phone',
+    neighborhoodArea: 'Neighborhood / Building Zone',
+    monthlySubFee: 'Monthly Subscription Fee (AED)',
+    createStoreSubmit: 'Create & Provision Store',
+    billingStatus: 'Billing & Overdue Status',
+    paidUpToDate: 'Paid / In Good Standing',
+    overdueWarning: 'Overdue Warning',
+    servicePausedLabel: 'SERVICE AUTO-PAUSED',
+    daysOverdue: '{days} days overdue',
+    sendReminderBtn: 'Send WhatsApp Reminder',
+    reminderSentSuccess: 'Reminder dispatched to merchant WhatsApp',
+    adminExplicitAllow: 'Explicit Override (Unpause)',
+    adminPauseService: 'Pause Service',
+    allowStoreExplicitly: 'Allow store to operate despite overdue',
+    autoPauseRuleNotice: 'Automated 10-Day Overdue Policy Active: Stores overdue by 10+ days are suspended automatically unless granted an explicit Admin Override.',
+    filterOverdue: 'Overdue Accounts',
+    filterPaused: 'Paused Stores',
+    filterActive: 'Active & Paid',
+    whatsappReminderTemplate: 'Hello {merchantName}! Friendly reminder from ElShop HQ: Your monthly software subscription fee of {fee} AED for {storeName} is {days} days overdue. Please settle your account to avoid automated service suspension. Thank you!',
+  },
+  ar: {
+    appName: 'ElShop',
+    appTagline: 'منصة بقالة الحي في الإمارات',
+    roles: {
+      customer: 'واجهة الزبون',
+      merchant: 'جهاز التاجر',
+      rider: 'تطبيق التوصيل (مشي / دراجة)',
+      admin: 'لوحة الإدارة',
+    },
+    resetData: 'إعادة ضبط البيانات',
+    resetConfirm: 'هل تريد إعادة ضبط جميع البيانات للوضع الافتراضي؟',
+    storeSelectLabel: 'المتجر النشط:',
+    currency: 'درهم',
+    
+    // Customer
+    catalogBtn: 'الكتالوج',
+    online: 'متصل • بقالة الحي',
+    typeMessage: 'اكتب رسالة للمتجر...',
+    addToCart: 'إضافة',
+    outOfStock: 'غير متوفر',
+    cartTitle: 'سلة المشتريات',
+    subtotal: 'المجموع الفرعي',
+    deliveryFee: 'رسوم التوصيل',
+    freeDeliveryUnlocked: 'توصيل مجاني!',
+    deliveryFeeNotice: 'الطلبات أقل من ٢٥ درهم تتضمن رسوم توصيل ٣٫٥٠ درهم',
+    checkout: 'المتابعة للشراء',
+    deliveryAddress: 'عنوان التوصيل',
+    buildingName: 'اسم البناية',
+    unitNumber: 'رقم الشقة / الوحدة',
+    customerNotes: 'ملاحظات خاصة',
+    customerProfile: 'اختر حساب الزبون',
+    paymentMethod: 'طريقة الدفع',
+    cashOnDelivery: 'الدفع نقداً عند الاستلام',
+    cardTerminal: 'بطاقة ائتمان (جهاز الدفع)',
+    khataBook: 'سجل على الحساب (الدفتر / الخاطة)',
+    khataApprovedNotice: 'معتمد مسبقاً في دفتر حسابات المتجر',
+    khataNotApprovedNotice: 'الدفتر يتطلب موافقة مسبقة من التاجر',
+    placeOrder: 'تأكيد الطلب وفتح الواتساب',
+    sendWhatsAppOrder: 'إرسال ملخص الطلب عبر الواتساب',
+    chatOnWhatsApp: 'محادثة',
+    notifyCustomerWhatsApp: 'مراسلة الزبون على الواتساب',
+    sendKhataWhatsApp: 'إرسال كشف الخاطة عبر الواتساب',
+    orderTracking: 'تتبع الطلب المباشر',
+    statusPlaced: 'تم التقديم',
+    statusPacking: 'جاري التجهيز',
+    statusOutForDelivery: 'خرج للتوصيل',
+    statusDelivered: 'تم التوصيل',
+    simulatedCardTitle: 'مرر البطاقة أو الهاتف على الجهاز',
+    simulatedCardDesc: 'قرب البطاقة لإتمام الدفع السريع',
+    simulatingPayment: 'جاري معالجة الدفع...',
+    paymentSuccess: 'تم قبول الدفع بنجاح!',
+
+    // Merchant
+    orderBoard: 'لوحة الطلبات',
+    inventory: 'المخزون والمنتجات',
+    settlement: 'تسوية النقد مع عامل التوصيل',
+    newOrders: 'طلبات جديدة',
+    packing: 'قيد التجهيز',
+    outForDelivery: 'خرج للتوصيل',
+    acceptOrder: 'قبول الطلب',
+    batchSuggestion: 'تجميع الطلبات:',
+    batchText: 'طلبان أو أكثر لـ {building} - هل تريد تجميعهما لعامل واحد؟',
+    batchBtn: 'تجميع الطلبين',
+    orderDetail: 'قائمة فحص الطلب والإرسال',
+    customerNoteAlert: 'ملاحظة الزبون:',
+    checklistTitle: 'قائمة تجهيز المنتجات',
+    dispatchToRider: 'إرسال مع عامل المحل',
+    selectRider: 'اختر عامل التوصيل:',
+    stockManagement: 'إدارة المخزون',
+    toggleInStock: 'متوفر',
+    toggleOutOfStock: 'تحديد كغير متوفر',
+    cashSettlementTitle: 'تحصيل النقد والتسوية مع عامل التوصيل',
+    expectedCash: 'النقد المتوقع',
+    actualCashHandedIn: 'النقد المستلم فعلياً',
+    variance: 'الفرق',
+    approveSettlement: 'اعتماد التسوية',
+    flagDispute: 'تسجيل نزاع نقدي',
+    disputeFlagged: 'تم تسجيل نزاع نقدي!',
+
+    // New Catalog, Sale & Supplier Management
+    addProduct: 'إضافة منتج جديد',
+    manageSale: 'إدارة سعر العرض',
+    onSaleTag: '🔥 العروض الخاصّة',
+    lowStockTab: '🚨 تنبيه انخفاض المخزون',
+    lowStockAlertTitle: 'تنبيه إعادة تزويد المخزون',
+    lowStockAlertDesc: '{count} منتج(ات) انخفضت كميتها عن حد التنبيه (< {threshold} وحدات).',
+    lowStockThreshold: 'حد التنبيه (بالوحدات)',
+    setAlertThreshold: 'تحديد حد التنبيه',
+    defaultThresholdLabel: 'الحد الافتراضي للتنبيه',
+    toggleAlerts: 'تنبيهات المخزون',
+    alertsMuted: 'التنبيهات معطلة',
+    alertsActive: 'التنبيهات نشطة',
+    dismissAlert: 'إغلاق التنبيه',
+    reopenAlert: 'إظهار التنبيه',
+    restockQuick: 'تزويد سريع',
+    unitsCount: 'وحدات',
+    reorderSupplier: 'إعادة الطلب من المورد',
+    suppliersTitle: 'جهات اتصال الموردين والتزويد',
+    addSupplier: 'إضافة مورد جديد',
+    removeSupplier: 'حذف المورد',
+    supplierName: 'اسم المورد / الموزع',
+    supplierPhone: 'واتساب / هاتف المورد',
+    noSupplierAssigned: 'لم يتم تحديد مورد',
+    reorderMessageTemplate: 'مرحباً {supplierName}! يرجى تزويدنا بـ {qty} وحدة من {productName} لـ {storeName}. شكراً جزيلاً!',
+
+    // Rider / Runner
+    riderMode: 'قائمة مهام عامل التوصيل (مشي / دراجة)',
+    activeStops: 'محطات التوصيل النشطة',
+    cashToCollect: 'إجمالي النقد المطلوب تحصيله',
+    swipeToDeliver: 'اسحب لتأكيد التوصيل',
+    confirmDelivery: 'تأكيد التوصيل',
+    paymentType: 'طريقة الدفع',
+    collectCash: 'تحصيل نقدي',
+    cardPaid: 'مدفوع بالبطاقة',
+    khataBooked: 'مسجل على الدفتر',
+
+    // Admin
+    adminDashboard: 'لوحة العمليات والرقابة الرئيسية',
+    activeStores: 'المتاجر النشطة',
+    ordersToday: 'الطلبات المكتملة اليوم',
+    pendingDisputes: 'النزاعات النقدية المعلقة',
+    storeTableTitle: 'نظرة عامة على أداء المتاجر والاشتراكات',
+    storeName: 'اسم المتجر',
+    area: 'المنطقة',
+    todayOrders: 'طلبات اليوم',
+    monthlyOrders: 'الحجم الشهري',
+    disputeStatus: 'حالة النزاع',
+    economicsTitle: 'اشتراكات المتاجر والاقتصاد',
+    breakEvenConfig: 'حد التعادل للطلبات الشهرية:',
+    breakEvenOrders: 'حد التعادل ({count} طلب/شهر)',
+    aboveBreakEven: 'مربح / أعلى من حد التعادل',
+    belowBreakEven: 'أقل من حد التعادل',
+    subscriptionStatus: 'اشتراك ٢٩٩ درهم/شهر نشط',
+
+    // New Store Creation & Billing Governance (Arabic)
+    onboardStoreBtn: 'إضافة متجر جديد',
+    createNewStoreTitle: 'تسجيل وإعداد متجر بقالة جديد',
+    storeNameEn: 'اسم المتجر (بالإنجليزية)',
+    storeNameAr: 'اسم المتجر (بالعربية)',
+    assignedWhatsapp: 'رقم واتساب التاجر المخصص',
+    merchantManagerName: 'اسم التاجر / المسؤول',
+    storePhone: 'هاتف المتجر / الأرضي',
+    neighborhoodArea: 'المنطقة / مجمع الأبراج',
+    monthlySubFee: 'رسوم الاشتراك الشهري (درهم)',
+    createStoreSubmit: 'إنشاء وتجهيز المتجر',
+    billingStatus: 'حالة الفوترة والتحصيل',
+    paidUpToDate: 'مستوفي / سداد منتظم',
+    overdueWarning: 'تأخير في السداد',
+    servicePausedLabel: 'الخدمة متوقفة تلقائياً',
+    daysOverdue: 'تأخير {days} أيام',
+    sendReminderBtn: 'إرسال تذكير واتساب',
+    reminderSentSuccess: 'تم إرسال رسالة التذكير عبر واتساب التاجر',
+    adminExplicitAllow: 'استثناء يدوي (إلغاء الإيقاف)',
+    adminPauseService: 'إيقاف الخدمة',
+    allowStoreExplicitly: 'السماح بتشغيل المتجر رغم التأخير في السداد',
+    autoPauseRuleNotice: 'سياسة الإيقاف التلقائي بعد ١٠ أيام: يتم تعليق خدمات المتجر المتأخر لأكثر من ١٠ أيام تلقائياً ما لم يمنحه المشرف استثناءً صريحاً.',
+    filterOverdue: 'الحسابات المتأخرة',
+    filterPaused: 'المتاجر الموقوفة',
+    filterActive: 'المتاجر المنتظمة والنشطة',
+    whatsappReminderTemplate: 'مرحباً {merchantName}! تذكير من إدارة منصة الشوب: اشتراككم الشهري بقيمة {fee} درهم لمتجر {storeName} متأخر بـ {days} أيام. نرجو السداد لتفادي تعليق الخدمة التلقائي. شكراً لتعاونكم!',
+  },
+};
+
+export function getTranslation(lang: Language, key: string, params?: Record<string, any>): string {
+  const dict = dictionary[lang] || dictionary.en;
+  const keys = key.split('.');
+  let val: any = dict;
+  for (const k of keys) {
+    if (val && typeof val === 'object') {
+      val = val[k];
+    } else {
+      break;
+    }
+  }
+  if (typeof val !== 'string') {
+    return key;
+  }
+  if (params) {
+    Object.keys(params).forEach((p) => {
+      val = (val as string).replace(new RegExp(`{${p}}`, 'g'), params[p]);
+    });
+  }
+  return val;
+}
