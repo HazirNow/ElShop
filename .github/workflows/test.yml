@@ -1,0 +1,28 @@
+﻿name: ElShop Continuous Integration
+
+on:
+  push:
+    branches: [ main, master, development ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test-suite:
+    name: Execute Automated Testing Pipeline
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install platform dependencies
+        run: npm ci
+
+      - name: Run Vitest Verification
+        run: npx vitest run
