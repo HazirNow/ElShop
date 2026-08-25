@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Building2, 
@@ -69,6 +69,7 @@ import { MerchantHeader, MerchantTab } from './MerchantHeader';
 import { UpgradePlanModal } from './UpgradePlanModal';
 import { ConsolidatedPnLView } from './ConsolidatedPnLView';
 import { StaffManagementView } from './StaffManagementView';
+import { MerchantCameraPromptModal } from './MerchantCameraPromptModal';
 
 interface Props {
   state: AppState;
@@ -157,6 +158,22 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
   const [selectedCustForAdjustment, setSelectedCustForAdjustment] = useState<CustomerProfile | null>(null);
   const [showOfflineModal, setShowOfflineModal] = useState(false);
   const [showOfflineCounterModal, setShowOfflineCounterModal] = useState(false);
+  const [showCameraPromptModal, setShowCameraPromptModal] = useState(false);
+
+  // Prompt merchant for camera access on initial POS entry if not already decided
+  useEffect(() => {
+    try {
+      const prompted = localStorage.getItem('elshop_merchant_camera_prompted');
+      if (!prompted) {
+        const timer = setTimeout(() => {
+          setShowCameraPromptModal(true);
+        }, 900);
+        return () => clearTimeout(timer);
+      }
+    } catch (e) {
+      // Ignore localStorage restrictions
+    }
+  }, []);
 
   // Offline Sync hook
   const { isOnline, isSimulatedOffline, isSyncing, pendingCount } = useOfflineSync();
@@ -2231,6 +2248,30 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
                 </div>
               </div>
 
+              {/* Merchant Camera & Scanner Hardware Preferences */}
+              <div className="pt-2 border-t border-slate-700/60">
+                <label className="block text-slate-300 font-bold mb-1.5 flex items-center justify-between text-xs">
+                  <span>Merchant POS Camera & Barcode Scanner</span>
+                  <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded font-mono">
+                    Merchant Only
+                  </span>
+                </label>
+                <div className="p-3 bg-slate-900/90 border border-slate-700/80 rounded-xl flex items-center justify-between gap-3">
+                  <div className="text-xs text-slate-400">
+                    <p className="font-semibold text-slate-200">Catalog Snapper & Barcode Video Stream</p>
+                    <p className="text-[10px] text-slate-400">Restricted to merchant counter session. Customers and riders are never prompted.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowCameraPromptModal(true)}
+                    className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-emerald-400 hover:text-emerald-300 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shrink-0"
+                  >
+                    <Camera className="w-3.5 h-3.5" />
+                    <span>Manage Access</span>
+                  </button>
+                </div>
+              </div>
+
               <button
                 type="submit"
                 disabled={isSavingBrand}
@@ -3174,6 +3215,13 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
         onSuccess={() => {
           if (onRefresh) onRefresh();
         }}
+      />
+
+      {/* Merchant Camera Permission Prompt Modal */}
+      <MerchantCameraPromptModal
+        isOpen={showCameraPromptModal}
+        onClose={() => setShowCameraPromptModal(false)}
+        lang={lang}
       />
 
       {/* Hidden native camera and gallery file inputs */}
