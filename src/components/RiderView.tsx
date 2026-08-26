@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Bike,
@@ -22,10 +22,12 @@ import {
   Calculator,
   BellRing,
   Share2,
-  Sparkles
+  Sparkles,
+  Layers,
+  Timer
 } from 'lucide-react';
 import { AppState, Order, Rider, Language } from '../types';
-import { updateOrder } from '../api';
+import { updateOrder, getBatchedRiderTasks, BatchedBuildingRun } from '../api';
 import { getTranslation } from '../translations';
 import { ProductImage } from './ProductImage';
 import { generateRiderToCustomerWhatsAppLink, generateDeliveredReceiptWhatsAppLink } from '../lib/whatsapp';
@@ -46,16 +48,36 @@ export const RiderView: React.FC<Props> = ({ state, activeStoreId, lang, onRefre
   const [activeRiderId, setActiveRiderId] = useState<string>(storeRiders[0]?.id || 'rider-1');
   const [isSunlightMode, setIsSunlightMode] = useState<boolean>(false);
   const [sortByFloorAsc, setSortByFloorAsc] = useState<boolean>(false);
+  const [selectedBuildingFilter, setSelectedBuildingFilter] = useState<string>('all');
+  const [batchedRuns, setBatchedRuns] = useState<BatchedBuildingRun[]>([]);
 
   // Cash Change Calculator state for modal
   const [tenderedAmount, setTenderedAmount] = useState<number | null>(null);
 
   const currentRider = storeRiders.find((r) => r.id === activeRiderId) || storeRiders[0];
 
+  // Fetch batched tasks from /api/rider/batched-tasks
+  useEffect(() => {
+    let isMounted = true;
+    getBatchedRiderTasks().then((res) => {
+      if (isMounted && res && res.data) {
+        setBatchedRuns(res.data);
+      }
+    }).catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, [state.orders]);
+
   // Rider's assigned dispatched orders
   let riderTasks = state.orders.filter(
     (o) => o.riderId === currentRider?.id && o.status === 'out_for_delivery'
   );
+
+  // Filter by selected building if active
+  if (selectedBuildingFilter !== 'all') {
+    riderTasks = riderTasks.filter((o) => o.building === selectedBuildingFilter);
+  }
 
   // Floor sequence sorter
   if (sortByFloorAsc) {
@@ -67,6 +89,8 @@ export const RiderView: React.FC<Props> = ({ state, activeStoreId, lang, onRefre
       return getFloor(a.unit) - getFloor(b.unit);
     });
   }
+
+  const uniqueBuildings = Array.from(new Set(state.orders.filter(o => o.riderId === currentRider?.id && o.status === 'out_for_delivery').map(o => o.building)));
 
   const completedRiderTasks = state.orders.filter(
     (o) => o.riderId === currentRider?.id && o.status === 'delivered'
@@ -228,6 +252,43 @@ export const RiderView: React.FC<Props> = ({ state, activeStoreId, lang, onRefre
           </div>
         </div>
 
+        {/* Building Tower Batch Filter (Optimized Vertical Travel) */}
+        {uniqueBuildings.length > 1 && (
+          <div className={`px-4 py-2 border-b flex items-center gap-1.5 overflow-x-auto text-xs ${
+            isSunlightMode ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/60 border-slate-800'
+          }`}>
+            <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1 shrink-0">
+              <Layers className="w-3 h-3 text-emerald-400" /> Tower Batch:
+            </span>
+            <button
+              onClick={() => setSelectedBuildingFilter('all')}
+              className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold whitespace-nowrap transition-all ${
+                selectedBuildingFilter === 'all'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+              }`}
+            >
+              All Stops ({state.orders.filter(o => o.riderId === currentRider?.id && o.status === 'out_for_delivery').length})
+            </button>
+            {uniqueBuildings.map((bldg) => {
+              const count = state.orders.filter(o => o.riderId === currentRider?.id && o.status === 'out_for_delivery' && o.building === bldg).length;
+              return (
+                <button
+                  key={bldg}
+                  onClick={() => setSelectedBuildingFilter(bldg)}
+                  className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold whitespace-nowrap transition-all ${
+                    selectedBuildingFilter === bldg
+                      ? 'bg-amber-400 text-slate-950 shadow-xs'
+                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                  }`}
+                >
+                  {bldg} ({count})
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {/* Task List Container */}
         <div className={`flex-1 overflow-y-auto p-3 space-y-3 transition-colors ${
           isSunlightMode ? 'bg-slate-100' : 'bg-slate-950'
@@ -238,7 +299,13 @@ export const RiderView: React.FC<Props> = ({ state, activeStoreId, lang, onRefre
             }`}>
               Dispatch Queue ({riderTasks.length})
             </h4>
-            {sortByFloorAsc && (
+            {selectedBuildingFilter !== 'all' && (
+              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md flex items-center gap-1">
+                <Timer className="w-3 h-3" />
+                ~{riderTasks.length * 3}m Elevator Run
+              </span>
+            )}
+            {selectedBuildingFilter === 'all' && sortByFloorAsc && (
               <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-md">
                 Elevator Run Optimized
               </span>

@@ -751,3 +751,54 @@ export async function sendStorePaymentReminder(
   throw new Error('Store not found');
 }
 
+export interface BatchedBuildingRun {
+  buildingName: string;
+  totalOrders: number;
+  estimatedElevatorTimeMins: number;
+  orders: Order[];
+}
+
+export async function getBatchedRiderTasks(): Promise<{
+  success: boolean;
+  totalBatchedRuns: number;
+  data: BatchedBuildingRun[];
+}> {
+  try {
+    const res = await safeFetch('/api/rider/batched-tasks', undefined, 3000);
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (err) {
+    // Local grouping fallback
+  }
+
+  const cached = getCachedState();
+  const activeOrders = cached.orders.filter(
+    (o) => o.status === 'placed' || o.status === 'packing' || o.status === 'out_for_delivery'
+  );
+
+  const grouped = activeOrders.reduce((acc: Record<string, BatchedBuildingRun>, order) => {
+    const buildingKey = order.building || (order as any).address?.building || 'General Area';
+    if (!acc[buildingKey]) {
+      acc[buildingKey] = {
+        buildingName: buildingKey,
+        totalOrders: 0,
+        estimatedElevatorTimeMins: 0,
+        orders: [],
+      };
+    }
+    acc[buildingKey].orders.push(order);
+    acc[buildingKey].totalOrders += 1;
+    acc[buildingKey].estimatedElevatorTimeMins = acc[buildingKey].totalOrders * 3;
+    return acc;
+  }, {});
+
+  const batchedRuns = Object.values(grouped).sort((a, b) => b.totalOrders - a.totalOrders);
+
+  return {
+    success: true,
+    totalBatchedRuns: batchedRuns.length,
+    data: batchedRuns,
+  };
+}
+

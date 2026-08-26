@@ -16,7 +16,7 @@ import { AppState, Store as StoreType, Language } from '../types';
 import { calculateCustomerKhataBalance } from '../khataUtils';
 import { formatWhatsAppNumber, formatWhatsAppDeepLink } from '../lib/whatsapp';
 import { ShiftReconciliationModal } from './ShiftReconciliationModal';
-import { useTierAccess } from '../lib/useTierAccess';
+import { useTierAccess } from '../hooks/useTierAccess';
 
 interface Props {
   state: AppState;

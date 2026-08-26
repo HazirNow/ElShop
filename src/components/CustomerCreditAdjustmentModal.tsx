@@ -22,7 +22,7 @@ import {
 import { CustomerProfile, Order, Store, Language, KhataTransaction } from '../types';
 import { updateCustomer, settleCustomerKhata } from '../api';
 import { calculateCustomerKhataBalance } from '../khataUtils';
-import { useTierAccess } from '../lib/useTierAccess';
+import { useTierAccess } from '../hooks/useTierAccess';
 import { ElShopLogo } from './ElShopLogo';
 
 interface CustomerCreditAdjustmentModalProps {

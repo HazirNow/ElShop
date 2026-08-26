@@ -12,7 +12,7 @@ import {
   Save
 } from 'lucide-react';
 import { Store, Language } from '../types';
-import { useTierAccess } from '../lib/useTierAccess';
+import { useTierAccess } from '../hooks/useTierAccess';
 import { updateStore } from '../api';
 
 interface Props {

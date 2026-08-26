@@ -64,7 +64,7 @@ import { useOfflineSync } from '../lib/useOfflineSync';
 import { OfflineSyncModal } from './OfflineSyncModal';
 import { OfflineCounterOrderModal } from './OfflineCounterOrderModal';
 import { Wifi, WifiOff } from 'lucide-react';
-import { useTierAccess } from '../lib/useTierAccess';
+import { useTierAccess } from '../hooks/useTierAccess';
 import { MerchantHeader, MerchantTab } from './MerchantHeader';
 import { UpgradePlanModal } from './UpgradePlanModal';
 import { ShiftReconciliationModal } from './ShiftReconciliationModal';
