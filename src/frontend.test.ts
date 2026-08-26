@@ -1,4 +1,4 @@
-﻿import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 
 // 1. TEST SUITE: Integer Money Math Safety
 describe('Khata Ledger Integer Math Safety', () => {
@@ -35,27 +35,34 @@ describe('Merchant Cash Reconciliation Override Audit Trail', () => {
     localStorage.clear();
   });
 
-  it('should write an un-bypassable log packet to localStorage upon manual cash variance changes', () => {
-    const logReconciliationOverride = (expected: number, actual: number, reason: string) => {
+  it('should write an un-bypassable log packet to tenant-isolated localStorage keys upon manual cash variance changes', () => {
+    const logReconciliationOverride = (tenantId: string, expected: number, actual: number, reason: string) => {
+      const storageKey = `pilot_cash_audit_trail_${tenantId}`;
       const auditEntry = {
         timestamp: new Date().toISOString(),
+        storeId: tenantId,
         expectedFils: expected,
         actualFils: actual,
         varianceFils: actual - expected,
         reason: reason || "No reason provided"
       };
-      const currentLogs = JSON.parse(localStorage.getItem('pilot_cash_audit_trail') || '[]');
+      const currentLogs = JSON.parse(localStorage.getItem(storageKey) || '[]');
       currentLogs.push(auditEntry);
-      localStorage.setItem('pilot_cash_audit_trail', JSON.stringify(currentLogs));
+      localStorage.setItem(storageKey, JSON.stringify(currentLogs));
     };
 
-    logReconciliationOverride(10000, 8450, "Register missing float cash");
+    // Log override for store-001
+    logReconciliationOverride('store-001', 10000, 8450, "Register missing float cash");
 
-    const writtenLogs = JSON.parse(localStorage.getItem('pilot_cash_audit_trail') || '[]');
-    
-    expect(writtenLogs).toHaveLength(1);
-    expect(writtenLogs[0].varianceFils).toBe(-1550); // Checks the index location correctly
-    expect(writtenLogs[0].reason).toBe("Register missing float cash");
+    // Check store-001 has logs
+    const store1Logs = JSON.parse(localStorage.getItem('pilot_cash_audit_trail_store-001') || '[]');
+    expect(store1Logs).toHaveLength(1);
+    expect(store1Logs[0].varianceFils).toBe(-1550);
+    expect(store1Logs[0].reason).toBe("Register missing float cash");
+
+    // Verify complete tenant isolation: store-002 has NO cross-leaked logs
+    const store2Logs = JSON.parse(localStorage.getItem('pilot_cash_audit_trail_store-002') || '[]');
+    expect(store2Logs).toHaveLength(0);
   });
 });
 

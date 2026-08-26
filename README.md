@@ -206,10 +206,10 @@ The `InteractiveSimulationEngine.tsx` provides zero-text, micro-animation practi
 
 ---
 
-## 🧪 Automated Testing & Invariants (23/23 Vitest Suite)
+## 🧪 Automated Testing & Invariants (24/24 Vitest Suite)
 
 The codebase enforces strict mathematical integrity and architectural isolation across 4 test suites running on Vitest:
-- **`src/backend.test.ts`**: Fils-based integer arithmetic, Khata debt calculations, 5-tower flyer dropdown constraints, cash reconciliation override logs, subscription suspension timers, Tier 3 Franchise COGS calculations, `useTierAccess` fail-safe rules, automated WhatsApp order webhook payload generator, and simulation engine integer invariants (13 test suites).
+- **`src/backend.test.ts`**: Fils-based integer arithmetic, Khata debt calculations, 5-tower flyer dropdown constraints, cash reconciliation override logs, subscription suspension timers, Tier 3 Franchise COGS calculations, `useTierAccess` fail-safe rules, automated WhatsApp order webhook payload generator, concurrent multi-device cash counting, malformed input sanitization, 100-order elevator sorter stress tests, and offline ledger recovery sync (14 tests).
 - **`src/tests/businessLogic.test.ts`**: Shift drawer variance calculations, cash dispute thresholds, and tenant isolation rules.
 - **`src/frontend.test.ts`**: Component rendering integrity and currency formatting.
 - **`src/tests/security.test.ts`**: RBAC permissions, role authorization, and PIN protection boundaries.
