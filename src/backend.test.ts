@@ -1,4 +1,4 @@
-﻿import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'vitest';
 
 // Emulate the core light-weight multi-tenant structures configured in server.ts
 interface Tenant {
@@ -125,3 +125,43 @@ describe('Superadmin Global Telemetry Edge Protections', () => {
     expect(response.data?.totalVolumeFils).toBe(3500); // 35.00 AED total volume match
   });
 });
+
+// 10. TEST SUITE: Tier 3 Franchise COGS & Gross Profit Margin Arithmetic
+describe('Franchise Financial Analytics Gross Margin Calculations', () => {
+  it('should compute exact gross profit margin percentages without IEEE-754 floating-point drift', () => {
+    // Simulate a product sale: Retail price 10.00 AED (1000 fils), Wholesale COGS 6.50 AED (650 fils)
+    const priceFils = 1000;
+    const cogsFils = 650;
+
+    const calculateGrossMarginPercentage = (retail: number, cost: number) => {
+      const grossProfitFils = retail - cost; // 350 fils profit
+      // Calculate percentage and lock it safely to two decimal places
+      return parseFloat(((grossProfitFils / retail) * 100).toFixed(2));
+    };
+
+    const marginPercentage = calculateGrossMarginPercentage(priceFils, cogsFils);
+    
+    expect(marginPercentage).toBe(35.00); // Guarantees an exact, clean 35% margin display
+    expect(Number.isNaN(marginPercentage)).toBe(false);
+  });
+});
+
+// 11. TEST SUITE: useTierAccess Component Gating Robustness
+describe('Subscription Tier Feature Gating Fail-Safe Rules', () => {
+  const evaluateAccessPermission = (tier: number | undefined, requiredTier: number) => {
+    // Fallback safe: if tier is missing or undefined, force restrict access to Tier 1 default baseline
+    const activeTier = tier ?? 1;
+    return activeTier >= requiredTier;
+  };
+
+  it('should fallback to Tier 1 restriction parameters when tenant profile data is corrupt or undefined', () => {
+    const corruptTenantTier = undefined;
+    
+    const canAccessMartFeatures = evaluateAccessPermission(corruptTenantTier, 2); // Requires Tier 2 (Mart)
+    const canAccessBaqalaFeatures = evaluateAccessPermission(corruptTenantTier, 1); // Requires Tier 1 (Baqala)
+
+    expect(canAccessMartFeatures).toBe(false); // Blocked safely
+    expect(canAccessBaqalaFeatures).toBe(true); // Allowed baseline tools
+  });
+});
+

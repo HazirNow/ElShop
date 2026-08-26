@@ -67,6 +67,7 @@ import { Wifi, WifiOff } from 'lucide-react';
 import { useTierAccess } from '../lib/useTierAccess';
 import { MerchantHeader, MerchantTab } from './MerchantHeader';
 import { UpgradePlanModal } from './UpgradePlanModal';
+import { ShiftReconciliationModal } from './ShiftReconciliationModal';
 import { ConsolidatedPnLView } from './ConsolidatedPnLView';
 import { StaffManagementView } from './StaffManagementView';
 import { MerchantCameraPromptModal } from './MerchantCameraPromptModal';
@@ -159,6 +160,7 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
   const [showOfflineModal, setShowOfflineModal] = useState(false);
   const [showOfflineCounterModal, setShowOfflineCounterModal] = useState(false);
   const [showCameraPromptModal, setShowCameraPromptModal] = useState(false);
+  const [showShiftReconciliationModal, setShowShiftReconciliationModal] = useState(false);
 
   // Prompt merchant for camera access on initial POS entry if not already decided
   useEffect(() => {
@@ -729,6 +731,7 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
         onOpenQuickOrderModal={() => setShowOfflineCounterModal(true)}
         onOpenElevatorPosterModal={() => setShowElevatorPosterModal(true)}
         onOpenUpgradeModal={handleOpenUpgradeModal}
+        onOpenShiftReconciliation={() => setShowShiftReconciliationModal(true)}
         soundEnabled={soundEnabled}
         onToggleSound={() => {
           const next = !soundEnabled;
@@ -737,9 +740,17 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
         }}
       />
 
-      {/* --- TAB 1: 3-COLUMN ORDER BOARD --- */}
-      {activeTab === 'board' && (
-        <div className="flex-1 flex flex-col space-y-4">
+      <AnimatePresence mode="wait">
+        {/* --- TAB 1: 3-COLUMN ORDER BOARD --- */}
+        {activeTab === 'board' && (
+          <motion.div
+            key="board"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.18 }}
+            className="flex-1 flex flex-col space-y-4"
+          >
           {/* Daily Baqala Register Cash & Khata Summary */}
           <DailyBaqalaSummary 
             state={state} 
@@ -981,7 +992,7 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
             </div>
 
           </div>
-        </div>
+        </motion.div>
       )}
 
       {/* --- TAB 2: INVENTORY & CATALOG MANAGEMENT --- */}
@@ -1003,7 +1014,14 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
         });
 
         return (
-          <div className="flex-1 flex flex-col space-y-4">
+          <motion.div
+            key="inventory"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.18 }}
+            className="flex-1 flex flex-col space-y-4"
+          >
             {/* Expiring Soon Warning Banner */}
             {expiringSoonProducts.length > 0 && (
               <div className="bg-amber-950/50 border border-amber-500/60 rounded-2xl p-4 space-y-3 shadow-md">
@@ -1621,13 +1639,20 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
                 );
               })}
           </div>
-        </div>
+        </motion.div>
       );
     })()}
 
       {/* --- TAB 3: RIDER CASH SETTLEMENT --- */}
       {activeTab === 'settlement' && (
-        <div className="space-y-4">
+        <motion.div
+          key="settlement"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.18 }}
+          className="space-y-4"
+        >
           <div className="flex-1 bg-slate-800/80 border border-slate-700 rounded-2xl p-5 flex flex-col md:flex-row gap-6">
           <div className="flex-1 space-y-4">
             <h3 className="font-bold text-sm text-white flex items-center gap-2">
@@ -1783,12 +1808,19 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
             })}
           </div>
         </div>
-        </div>
+        </motion.div>
       )}
 
       {/* --- TAB 4: CUSTOMERS & KHATA CREDIT LIMITS --- */}
       {activeTab === 'customers' && (
-        <div className="flex-1 flex flex-col space-y-4">
+        <motion.div
+          key="customers"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.18 }}
+          className="flex-1 flex flex-col space-y-4"
+        >
           {/* Top Bar: Search & Metrics & Actions */}
           <div className="bg-slate-800 border border-slate-700 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-md">
             <div className="flex items-center gap-3 w-full sm:w-auto">
@@ -2018,12 +2050,19 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
                 );
               })}
           </div>
-        </div>
+        </motion.div>
       )}
 
       {/* --- TAB 5: STORE BRANDING & PROFILE SETTINGS --- */}
       {activeTab === 'branding' && (
-        <div className="flex-1 flex flex-col max-w-3xl mx-auto w-full space-y-5">
+        <motion.div
+          key="branding"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.18 }}
+          className="flex-1 flex flex-col max-w-3xl mx-auto w-full space-y-5"
+        >
           <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-lg space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-700">
               <div className="flex items-center gap-3">
@@ -2282,30 +2321,47 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
               </button>
             </form>
           </div>
-        </div>
+        </motion.div>
       )}
 
       {/* --- TAB 6: CONSOLIDATED P&L & MULTI-STORE INSIGHTS (Tier 3) --- */}
       {activeTab === 'pnl' && (
-        <ConsolidatedPnLView
-          store={store}
-          allStores={state.stores || []}
-          orders={storeOrders}
-          products={storeProducts}
-          lang={lang}
-          onOpenUpgradeModal={handleOpenUpgradeModal}
-        />
+        <motion.div
+          key="pnl"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.18 }}
+        >
+          <ConsolidatedPnLView
+            store={store}
+            allStores={state.stores || []}
+            orders={storeOrders}
+            products={storeProducts}
+            lang={lang}
+            onOpenUpgradeModal={handleOpenUpgradeModal}
+          />
+        </motion.div>
       )}
 
       {/* --- TAB 7: STAFF ROLES & ADVANCED PIN MANAGEMENT (Tier 2+) --- */}
       {activeTab === 'staff' && (
-        <StaffManagementView
-          store={store}
-          lang={lang}
-          onRefresh={onRefresh}
-          onOpenUpgradeModal={handleOpenUpgradeModal}
-        />
+        <motion.div
+          key="staff"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.18 }}
+        >
+          <StaffManagementView
+            store={store}
+            lang={lang}
+            onRefresh={onRefresh}
+            onOpenUpgradeModal={handleOpenUpgradeModal}
+          />
+        </motion.div>
       )}
+      </AnimatePresence>
 
       {/* --- MODALS FOR MERCHANT OPERATIONS --- */}
       <AnimatePresence>
@@ -3203,6 +3259,16 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
         store={store}
         lang={lang}
         onOrderCreated={onRefresh}
+      />
+
+      {/* End-of-Shift Cash Drawer Reconciliation Modal */}
+      <ShiftReconciliationModal
+        isOpen={showShiftReconciliationModal}
+        onClose={() => setShowShiftReconciliationModal(false)}
+        state={state}
+        store={store}
+        lang={lang}
+        onSuccess={onRefresh}
       />
 
       {/* Subscription Tier Upgrade & Feature Matrix Modal */}

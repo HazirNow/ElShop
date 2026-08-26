@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   X, 
   Sparkles, 
@@ -35,15 +36,12 @@ export const UpgradePlanModal: React.FC<Props> = ({
   lockedFeatureTitle,
   onSuccess
 }) => {
-  if (!isOpen) return null;
-
   const isAr = lang === 'ar';
-  const currentTier = store.subscriptionTier || 1;
-  const [selectedTier, setSelectedTier] = useState<1 | 2 | 3>(
-    currentTier === 1 ? 2 : currentTier === 2 ? 3 : 1
-  );
+  const currentTier = store.subscriptionTier || (store.subscriptionFee >= 899 ? 3 : store.subscriptionFee >= 599 ? 2 : 1);
   const [isUpdating, setIsUpdating] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
+
+  if (!isOpen) return null;
 
   const plans = [
     {
@@ -132,8 +130,14 @@ export const UpgradePlanModal: React.FC<Props> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in overflow-y-auto">
-      <div className="bg-slate-900 border border-slate-700 rounded-3xl w-full max-w-4xl shadow-2xl overflow-hidden my-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95, y: 15 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 15 }}
+        transition={{ duration: 0.2 }}
+        className="bg-slate-900 border border-slate-700 rounded-3xl w-full max-w-4xl shadow-2xl overflow-hidden my-6"
+      >
         {/* Header */}
         <div className="px-6 py-5 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-slate-700 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -142,7 +146,11 @@ export const UpgradePlanModal: React.FC<Props> = ({
             </div>
             <div>
               <h2 className="text-base font-black text-white flex items-center gap-2">
-                <span>{isAr ? 'خطط وباقات اشتراك ElShop للمتاجر' : 'ElShop Merchant Plan Matrix'}</span>
+                <span>
+                  {currentTier === 1 && lockedFeatureTitle
+                    ? (isAr ? `الترقية إلى باقة المارت (Mart Plan)` : 'Upgrade to Mart Plan (Tier 2)')
+                    : (isAr ? 'خطط وباقات اشتراك ElShop للمتاجر' : 'ElShop Merchant Plan Matrix')}
+                </span>
                 <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                   {store.name}
                 </span>
@@ -293,7 +301,8 @@ export const UpgradePlanModal: React.FC<Props> = ({
             {isAr ? 'إغلاق' : 'Close'}
           </button>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 };
+

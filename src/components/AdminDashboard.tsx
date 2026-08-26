@@ -188,6 +188,55 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       .reduce((sum, t) => sum + t.amount, 0);
   }, [state.khataTransactions]);
 
+  // Gross Margin & COGS Calculations for Tier 3 Franchise and Network Stores
+  const storeFinancials = useMemo(() => {
+    return state.stores.map((store) => {
+      const storeOrders = state.orders.filter((o) => o.storeId === store.id && o.status === 'delivered');
+      const storeRevenue = storeOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+      const storeCOGS = storeOrders.reduce((sum, o) => {
+        const orderCOGS = o.items.reduce((itemSum, item) => {
+          const prod = state.products.find((p) => p.id === item.productId);
+          const unitCost = prod?.cogs ?? (prod?.cogsFils ? prod.cogsFils / 100 : prod?.costPrice ?? (item.price * 0.72));
+          return itemSum + (unitCost * item.quantity);
+        }, 0);
+        return sum + orderCOGS;
+      }, 0);
+      const grossProfit = Math.max(0, storeRevenue - storeCOGS);
+      const grossMarginPercent = storeRevenue > 0 
+        ? parseFloat(((grossProfit / storeRevenue) * 100).toFixed(2))
+        : 28.50;
+
+      return {
+        store,
+        revenue: storeRevenue,
+        cogs: storeCOGS,
+        grossProfit,
+        grossMarginPercent,
+        deliveredOrdersCount: storeOrders.length,
+        isTier3: store.subscriptionTier === 3 || (store.subscriptionFee !== undefined && store.subscriptionFee >= 899),
+      };
+    });
+  }, [state.stores, state.orders, state.products]);
+
+  const tier3Stores = useMemo(() => storeFinancials.filter((f) => f.isTier3), [storeFinancials]);
+
+  const aggregateTier3Stats = useMemo(() => {
+    const list = tier3Stores.length > 0 ? tier3Stores : storeFinancials;
+    const totalRev = list.reduce((sum, s) => sum + s.revenue, 0);
+    const totalCogs = list.reduce((sum, s) => sum + s.cogs, 0);
+    const totalProfit = Math.max(0, totalRev - totalCogs);
+    const avgMargin = totalRev > 0 
+      ? parseFloat(((totalProfit / totalRev) * 100).toFixed(2))
+      : 28.50;
+    return {
+      totalRev,
+      totalCogs,
+      totalProfit,
+      avgMargin,
+      count: list.length,
+    };
+  }, [tier3Stores, storeFinancials]);
+
   // Notifications list
   const notificationsList = useMemo(() => {
     const list: { id: string; title: string; desc: string; type: 'warning' | 'alert' | 'info'; time: string }[] = [];
@@ -409,10 +458,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <AdminTableSkeleton rows={5} />
             </div>
           ) : (
-            <>
+            <AnimatePresence mode="wait">
               {/* TAB 1: DASHBOARD OVERVIEW */}
               {activeTab === 'dashboard' && (
-                <div className="space-y-6 animate-fade-in" id="admin-overview-view">
+                <motion.div
+                  key="dashboard"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.18 }}
+                  className="space-y-6"
+                  id="admin-overview-view"
+                >
                   
                   {/* Top Welcome & KPI Header */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -493,6 +550,82 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       <div className="text-[11px] text-slate-400">
                         Across tower residents
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Tier 3 Franchise Gross Margin & Performance Analytics Card */}
+                  <div className="bg-slate-900 border border-purple-500/30 rounded-2xl p-5 space-y-4 shadow-xl">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+                      <div className="flex items-center gap-2.5">
+                        <div className="p-2 rounded-xl bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                          <TrendingUp className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-sm font-black text-white uppercase tracking-wider">
+                              {isRtl ? 'تحليلات هامش الربح الإجمالي (COGS) لأصحاب الفرانشايز (Tier 3)' : 'Tier 3 Franchise Gross Margin & COGS Breakdown'}
+                            </h3>
+                            <span className="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40 text-[10px] font-black uppercase">
+                              Franchise Insights
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-400">
+                            {isRtl ? 'حساب هامش الربح الإجمالي وتكلفة البضاعة المباعة لكل متجر وشبكة الفروع' : 'Real-time Gross Profit Margin per store calculated from delivered orders and inventory COGS.'}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <div className="text-right">
+                          <span className="text-[10px] text-slate-400 uppercase font-bold block">Avg Franchise Margin</span>
+                          <span className="text-base font-black text-emerald-400">{aggregateTier3Stats.avgMargin.toFixed(1)}%</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {storeFinancials.map((sf) => (
+                        <div
+                          key={sf.store.id}
+                          className="bg-slate-950/80 border border-slate-800 rounded-xl p-3.5 space-y-2.5"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <span className="font-bold text-white text-xs block">{sf.store.name}</span>
+                              <span className="text-[10px] text-slate-400">{sf.store.area}</span>
+                            </div>
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${
+                              sf.isTier3
+                                ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                                : 'bg-slate-800 text-slate-400'
+                            }`}>
+                              Tier {sf.store.subscriptionTier || (sf.store.subscriptionFee === 899 ? 3 : 1)}
+                            </span>
+                          </div>
+
+                          <div className="space-y-1 text-xs">
+                            <div className="flex justify-between text-slate-400">
+                              <span>Revenue (Delivered):</span>
+                              <span className="font-bold text-white">{sf.revenue.toFixed(2)} AED</span>
+                            </div>
+                            <div className="flex justify-between text-slate-400">
+                              <span>Estimated COGS:</span>
+                              <span className="font-mono text-slate-300">{sf.cogs.toFixed(2)} AED</span>
+                            </div>
+                            <div className="flex justify-between text-slate-400 pt-1 border-t border-slate-800">
+                              <span className="font-bold text-emerald-400">Gross Margin:</span>
+                              <span className="font-black text-emerald-400">{sf.grossMarginPercent.toFixed(1)}% ({sf.grossProfit.toFixed(2)} AED)</span>
+                            </div>
+                          </div>
+
+                          <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-emerald-500 transition-all"
+                              style={{ width: `${Math.min(100, Math.max(10, sf.grossMarginPercent))}%` }}
+                            />
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
 
@@ -597,54 +730,94 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                   </div>
 
-                </div>
+                </motion.div>
               )}
 
               {/* TAB 2: STORE MANAGEMENT */}
               {activeTab === 'stores' && (
-                <AdminStoreTable
-                  stores={state.stores}
-                  lang={currentLang}
-                  onRefresh={onRefresh}
-                  onShowToast={showToast}
-                  onOpenCreateStore={() => setShowCreateStoreModal(true)}
-                  onAddAuditLog={addAuditLog}
-                />
+                <motion.div
+                  key="stores"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.18 }}
+                >
+                  <AdminStoreTable
+                    stores={state.stores}
+                    lang={currentLang}
+                    onRefresh={onRefresh}
+                    onShowToast={showToast}
+                    onOpenCreateStore={() => setShowCreateStoreModal(true)}
+                    onAddAuditLog={addAuditLog}
+                  />
+                </motion.div>
               )}
 
               {/* TAB 3: USER MANAGEMENT & 2FA */}
               {activeTab === 'users' && (
-                <AdminUserTable
-                  state={state}
-                  lang={currentLang}
-                  onShowToast={showToast}
-                  onAddAuditLog={addAuditLog}
-                />
+                <motion.div
+                  key="users"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.18 }}
+                >
+                  <AdminUserTable
+                    state={state}
+                    lang={currentLang}
+                    onShowToast={showToast}
+                    onAddAuditLog={addAuditLog}
+                  />
+                </motion.div>
               )}
 
               {/* TAB 4: BILLING & DUNNING */}
               {activeTab === 'billing' && (
-                <AdminBillingView
-                  state={state}
-                  lang={currentLang}
-                  onRefresh={onRefresh}
-                  onShowToast={showToast}
-                  onAddAuditLog={addAuditLog}
-                />
+                <motion.div
+                  key="billing"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.18 }}
+                >
+                  <AdminBillingView
+                    state={state}
+                    lang={currentLang}
+                    onRefresh={onRefresh}
+                    onShowToast={showToast}
+                    onAddAuditLog={addAuditLog}
+                  />
+                </motion.div>
               )}
 
               {/* TAB 5: SECURITY AUDIT TRAIL */}
               {activeTab === 'audit' && (
-                <AdminAuditLogs
-                  logs={auditLogs}
-                  lang={currentLang}
-                  onShowToast={showToast}
-                />
+                <motion.div
+                  key="audit"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.18 }}
+                >
+                  <AdminAuditLogs
+                    logs={auditLogs}
+                    lang={currentLang}
+                    onShowToast={showToast}
+                  />
+                </motion.div>
               )}
 
               {/* TAB 6: GLOBAL SYSTEM SETTINGS */}
               {activeTab === 'settings' && (
-                <div className="space-y-6 animate-fade-in" id="admin-settings-view">
+                <motion.div
+                  key="settings"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.18 }}
+                  className="space-y-6"
+                  id="admin-settings-view"
+                >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
                       <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2.5">
@@ -711,9 +884,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       </button>
                     </div>
                   </div>
-                </div>
+                </motion.div>
               )}
-            </>
+            </AnimatePresence>
           )}
 
         </main>
@@ -751,140 +924,153 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       {/* =========================================================================
           MODAL: ONBOARD NEW STORE
          ========================================================================= */}
-      {showCreateStoreModal && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-lg shadow-2xl p-6 space-y-5 animate-scale-up">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-              <div className="flex items-center gap-2">
-                <PlusCircle className="w-5 h-5 text-indigo-400" />
-                <h3 className="text-base font-black text-white">Onboard New Store to Network</h3>
-              </div>
-              <button
-                onClick={() => setShowCreateStoreModal(false)}
-                className="p-1 text-slate-400 hover:text-white rounded-lg"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateStoreSubmit} className="space-y-4 text-xs">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-slate-400 font-bold">Store Name (English)</label>
-                  <input
-                    type="text"
-                    required
-                    value={newStoreName}
-                    onChange={(e) => setNewStoreName(e.target.value)}
-                    placeholder="Al Marina Mart"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
-                  />
+      <AnimatePresence>
+        {showCreateStoreModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 15 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 15 }}
+              transition={{ duration: 0.2 }}
+              className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-lg shadow-2xl p-6 space-y-5"
+            >
+              <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+                <div className="flex items-center gap-2">
+                  <PlusCircle className="w-5 h-5 text-indigo-400" />
+                  <h3 className="text-base font-black text-white">Onboard New Store to Network</h3>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-slate-400 font-bold">Store Name (Arabic)</label>
-                  <input
-                    type="text"
-                    value={newStoreNameAr}
-                    onChange={(e) => setNewStoreNameAr(e.target.value)}
-                    placeholder="سوبرماركت المارينا"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-slate-400 font-bold">Tower / Neighborhood Area</label>
-                  <input
-                    type="text"
-                    required
-                    value={newStoreArea}
-                    onChange={(e) => setNewStoreArea(e.target.value)}
-                    placeholder="Marina Pinnacle Tower"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-slate-400 font-bold">Monthly Fee (AED)</label>
-                  <input
-                    type="number"
-                    required
-                    value={newStoreSubFee}
-                    onChange={(e) => setNewStoreSubFee(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-slate-400 font-bold">Merchant Manager Name</label>
-                  <input
-                    type="text"
-                    value={newStoreMerchantName}
-                    onChange={(e) => setNewStoreMerchantName(e.target.value)}
-                    placeholder="Rashid Khan"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-slate-400 font-bold">WhatsApp Billing Number</label>
-                  <input
-                    type="tel"
-                    value={newStoreWhatsapp}
-                    onChange={(e) => setNewStoreWhatsapp(e.target.value)}
-                    placeholder="+971 50 123 4567"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-slate-400 font-bold">Merchant POS PIN (4 Digits)</label>
-                  <input
-                    type="text"
-                    maxLength={6}
-                    required
-                    value={newStorePin}
-                    onChange={(e) => setNewStorePin(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-amber-300 font-mono font-bold focus:outline-none focus:border-amber-500"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-slate-400 font-bold">Courier Runner PIN (4 Digits)</label>
-                  <input
-                    type="text"
-                    maxLength={6}
-                    required
-                    value={newStoreRiderPin}
-                    onChange={(e) => setNewStoreRiderPin(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-indigo-300 font-mono font-bold focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-              </div>
-
-              <div className="pt-3 flex items-center justify-end gap-2">
                 <button
-                  type="button"
                   onClick={() => setShowCreateStoreModal(false)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl"
+                  className="p-1 text-slate-400 hover:text-white rounded-lg"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmittingStore}
-                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-950 flex items-center gap-2"
-                >
-                  {isSubmittingStore && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
-                  <span>Provision & Launch Node</span>
+                  <X className="w-5 h-5" />
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+
+              <form onSubmit={handleCreateStoreSubmit} className="space-y-4 text-xs">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-slate-400 font-bold">Store Name (English)</label>
+                    <input
+                      type="text"
+                      required
+                      value={newStoreName}
+                      onChange={(e) => setNewStoreName(e.target.value)}
+                      placeholder="Al Marina Mart"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-slate-400 font-bold">Store Name (Arabic)</label>
+                    <input
+                      type="text"
+                      value={newStoreNameAr}
+                      onChange={(e) => setNewStoreNameAr(e.target.value)}
+                      placeholder="سوبرماركت المارينا"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-slate-400 font-bold">Tower / Neighborhood Area</label>
+                    <input
+                      type="text"
+                      required
+                      value={newStoreArea}
+                      onChange={(e) => setNewStoreArea(e.target.value)}
+                      placeholder="Marina Pinnacle Tower"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-slate-400 font-bold">Monthly Fee (AED)</label>
+                    <input
+                      type="number"
+                      required
+                      value={newStoreSubFee}
+                      onChange={(e) => setNewStoreSubFee(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-slate-400 font-bold">Merchant Manager Name</label>
+                    <input
+                      type="text"
+                      value={newStoreMerchantName}
+                      onChange={(e) => setNewStoreMerchantName(e.target.value)}
+                      placeholder="Rashid Khan"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-slate-400 font-bold">WhatsApp Billing Number</label>
+                    <input
+                      type="tel"
+                      value={newStoreWhatsapp}
+                      onChange={(e) => setNewStoreWhatsapp(e.target.value)}
+                      placeholder="+971 50 123 4567"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-slate-400 font-bold">Merchant POS PIN (4 Digits)</label>
+                    <input
+                      type="text"
+                      maxLength={6}
+                      required
+                      value={newStorePin}
+                      onChange={(e) => setNewStorePin(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-amber-300 font-mono font-bold focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-slate-400 font-bold">Courier Runner PIN (4 Digits)</label>
+                    <input
+                      type="text"
+                      maxLength={6}
+                      required
+                      value={newStoreRiderPin}
+                      onChange={(e) => setNewStoreRiderPin(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-indigo-300 font-mono font-bold focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-3 flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateStoreModal(false)}
+                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmittingStore}
+                    className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-950 flex items-center gap-2"
+                  >
+                    {isSubmittingStore && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
+                    <span>Provision & Launch Node</span>
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

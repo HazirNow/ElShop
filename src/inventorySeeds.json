@@ -1,15 +1,172 @@
 {
   "uaeMasterCatalog": [
-    { "id": "m-001", "sku": "ALMARAI-MILK-2L", "barcode": "6281007001254", "category": "Dairy", "priceFils": 1100, "en": { "name": "Almarai Fresh Milk Full Cream 2L", "unit": "Bottle" }, "ar": { "name": "المراعي حليب طازج كامل الدسم 2 لتر", "unit": "زجاجة" } },
-    { "id": "m-002", "sku": "INDOMIE-CHIX-5", "barcode": "089686043132",  "category": "Pantry", "priceFils": 650,  "en": { "name": "Indomie Chicken Flavor Noodles 5-Pack", "unit": "Pack" }, "ar": { "name": "إندومي شعيرية بنكهة الدجاج 5 حبات", "unit": "ربطة" } },
-    { "id": "m-003", "sku": "MAI-DUBAI-1.5", "barcode": "6297000623041", "category": "Beverages", "priceFils": 150,  "en": { "name": "Mai Dubai Drinking Water 1.5L", "unit": "Bottle" }, "ar": { "name": "ماي دبي مياه شرب 1.5 لتر", "unit": "زجاجة" } },
-    { "id": "m-004", "sku": "LIPTON-YELLOW-50", "barcode": "6281006114191", "category": "Beverages", "priceFils": 700,  "en": { "name": "Lipton Yellow Label 50 Tea Bags", "unit": "Box" }, "ar": { "name": "ليبتون العلامة الصفراء 50 كيس شاي", "unit": "علبة" } },
-    { "id": "m-005", "sku": "COKE-CAN-330",   "barcode": "5449000000996", "category": "Beverages", "priceFils": 250,  "en": { "name": "Coca-Cola Original Taste 330ml Can", "unit": "Can" }, "ar": { "name": "كوكاكولا الطعم الأصلي 330 مل علبة", "unit": "علبة" } },
-    { "id": "m-006", "sku": "ALMARAI-YOG-400", "barcode": "6281007000103", "category": "Dairy", "priceFils": 325,  "en": { "name": "Almarai Fresh Yogurt 400g", "unit": "Tub" }, "ar": { "name": "المراعي زبادي طازج 400 جرام", "unit": "علبة" } },
-    { "id": "m-007", "sku": "SADIA-BREAST-1",  "barcode": "7891515431102", "category": "Frozen", "priceFils": 2450, "en": { "name": "Sadia Chicken Breast Tender 1kg", "unit": "Bag" }, "ar": { "name": "ساديا صدور دجاج طرية 1 كجم", "unit": "كيس" } },
-    { "id": "m-008", "sku": "PUCK-JAR-500",   "barcode": "5707196168123", "category": "Dairy", "priceFils": 1550, "en": { "name": "Puck Cream Cheese Spread 500g", "unit": "Jar" }, "ar": { "name": "بوك جبنة كريم قابلة للدهن 500 جرام", "unit": "برطمان" } },
-    { "id": "m-009", "sku": "LAYS-SALT-M",     "barcode": "6281015501302", "category": "Snacks", "priceFils": 300,  "en": { "name": "Lay's Salted Potato Chips Medium", "unit": "Bag" }, "ar": { "name": "ليز رقائق بطاطس مملحة حجم متوسط", "unit": "كيس" } },
-    { "id": "m-010", "sku": "KRAFT-CHEDDAR",   "barcode": "7622300735122", "category": "Dairy", "priceFils": 575,  "en": { "name": "Kraft Cheddar Cheese Can 100g", "unit": "Can" }, "ar": { "name": "كرافت جبنة شيدر علبة 100 جرام", "unit": "علبة" } }
-  ],
-  "stores": []
+    {
+      "sku": "ALMARAI-MILK-2L",
+      "barcode": "6281007001254",
+      "priceFils": 1100,
+      "costFils": 880,
+      "cogsFils": 880,
+      "cogs": 8.80,
+      "stock": 48,
+      "minStockThreshold": 10,
+      "en": {
+        "name": "Almarai Fresh Milk Full Fat 2L",
+        "category": "Dairy & Eggs",
+        "unit": "2L Bottle"
+      },
+      "ar": {
+        "name": "المراعي حليب طازج كامل الدسم 2 لتر",
+        "category": "منتجات الألبان والبيض",
+        "unit": "عبوة ٢ لتر"
+      },
+      "image": "https://images.unsplash.com/photo-1550583724-b2692b85b150?w=500&auto=format&fit=crop&q=60"
+    },
+    {
+      "sku": "INDOMIE-MI-GORENG-5PK",
+      "barcode": "089686010724",
+      "priceFils": 750,
+      "costFils": 550,
+      "cogsFils": 550,
+      "cogs": 5.50,
+      "stock": 120,
+      "minStockThreshold": 25,
+      "en": {
+        "name": "Indomie Mi Goreng Fried Noodles 80g (Pack of 5)",
+        "category": "Instant Noodles & Pasta",
+        "unit": "5x80g Pack"
+      },
+      "ar": {
+        "name": "إندومي شعيرية مقلية مي جورينج ٨٠ جم (مجموعة ٥)",
+        "category": "النودلز والمعكرونة",
+        "unit": "مجموعة ٥ أكياس"
+      },
+      "image": "https://images.unsplash.com/photo-1612927601601-6638404737ce?w=500&auto=format&fit=crop&q=60"
+    },
+    {
+      "sku": "LIPTON-TEA-100TB",
+      "barcode": "6281031110013",
+      "priceFils": 1650,
+      "costFils": 1300,
+      "cogsFils": 1300,
+      "cogs": 13.00,
+      "stock": 35,
+      "minStockThreshold": 8,
+      "en": {
+        "name": "Lipton Yellow Label Black Tea 100 Tea Bags",
+        "category": "Tea & Coffee",
+        "unit": "Box of 100"
+      },
+      "ar": {
+        "name": "شاي ليبتون العلامة الصفراء ١٠٠ كيس شاي",
+        "category": "الشاي والقهوة",
+        "unit": "علبة ١٠٠ كيس"
+      },
+      "image": "https://images.unsplash.com/photo-1597481499750-3e6b22637e12?w=500&auto=format&fit=crop&q=60"
+    },
+    {
+      "sku": "PUCK-CHEESE-500G",
+      "barcode": "7622210741203",
+      "priceFils": 1850,
+      "costFils": 1450,
+      "cogsFils": 1450,
+      "cogs": 14.50,
+      "stock": 40,
+      "minStockThreshold": 10,
+      "en": {
+        "name": "Puck Processed Cream Cheese Glass Jar 500g",
+        "category": "Dairy & Eggs",
+        "unit": "500g Jar"
+      },
+      "ar": {
+        "name": "جبنة بوك كاسات كريمية بيضاء ٥٠٠ جم",
+        "category": "منتجات الألبان والبيض",
+        "unit": "برطمان ٥٠٠ جم"
+      },
+      "image": "https://images.unsplash.com/photo-1589881133595-a3c085cb731d?w=500&auto=format&fit=crop&q=60"
+    },
+    {
+      "sku": "ALMARAI-MANGO-1.4L",
+      "barcode": "6281007010415",
+      "priceFils": 850,
+      "costFils": 650,
+      "cogsFils": 650,
+      "cogs": 6.50,
+      "stock": 30,
+      "minStockThreshold": 6,
+      "en": {
+        "name": "Almarai 100% Pure Mango Juice 1.4L",
+        "category": "Juices & Beverages",
+        "unit": "1.4L Bottle"
+      },
+      "ar": {
+        "name": "عصير المراعي مانجو طبيعي ١٠٠٪ ١.٤ لتر",
+        "category": "العصائر والمشروبات",
+        "unit": "عبوة ١.٤ لتر"
+      },
+      "image": "https://images.unsplash.com/photo-1546173159-315724a31696?w=500&auto=format&fit=crop&q=60"
+    },
+    {
+      "sku": "SADIA-CHICKEN-BREAST-1KG",
+      "barcode": "7891000100103",
+      "priceFils": 2250,
+      "costFils": 1750,
+      "cogsFils": 1750,
+      "cogs": 17.50,
+      "stock": 25,
+      "minStockThreshold": 5,
+      "en": {
+        "name": "Sadia Frozen Chicken Breast 1kg",
+        "category": "Frozen Foods & Poultry",
+        "unit": "1kg Pouch"
+      },
+      "ar": {
+        "name": "صدور دجاج مجمدة ساديا ١ كجم",
+        "category": "المجمدات والدواجن",
+        "unit": "كيس ١ كجم"
+      },
+      "image": "https://images.unsplash.com/photo-1604503468506-a8da13d82791?w=500&auto=format&fit=crop&q=60"
+    },
+    {
+      "sku": "MAI-DUBAI-6X1.5L",
+      "barcode": "6291003001015",
+      "priceFils": 950,
+      "costFils": 680,
+      "cogsFils": 680,
+      "cogs": 6.80,
+      "stock": 80,
+      "minStockThreshold": 20,
+      "en": {
+        "name": "Mai Dubai Pure Natural Drinking Water 1.5L (6-Pack)",
+        "category": "Water & Hydration",
+        "unit": "6x1.5L Shrink"
+      },
+      "ar": {
+        "name": "مياه شرب طبيعية ماي دبي ١.٥ لتر (كرتون ٦ حبات)",
+        "category": "المياه والمشروبات",
+        "unit": "حزمة ٦ حبات"
+      },
+      "image": "https://images.unsplash.com/photo-1548839140-29a749e1bc4e?w=500&auto=format&fit=crop&q=60"
+    },
+    {
+      "sku": "LAYS-FRENCH-CHEESE-160G",
+      "barcode": "028400043816",
+      "priceFils": 650,
+      "costFils": 480,
+      "cogsFils": 480,
+      "cogs": 4.80,
+      "stock": 60,
+      "minStockThreshold": 15,
+      "en": {
+        "name": "Lay's French Cheese Potato Chips 160g",
+        "category": "Snacks & Chips",
+        "unit": "160g Bag"
+      },
+      "ar": {
+        "name": "رقائق بطاطس ليز بالجبنة الفرنسية ١٦٠ جم",
+        "category": "المقرمشات والسناكات",
+        "unit": "كيس ١٦٠ جم"
+      },
+      "image": "https://images.unsplash.com/photo-1566478989037-eec170784d0b?w=500&auto=format&fit=crop&q=60"
+    }
+  ]
 }

@@ -55,14 +55,18 @@ export const ConsolidatedPnLView: React.FC<Props> = ({
 
   // 3. Gross Profit & Margin
   const grossProfit = Math.max(0, grossRevenue - totalCOGS);
-  const grossMarginPercent = grossRevenue > 0 ? (grossProfit / grossRevenue) * 100 : 28.5;
+  const grossMarginPercent = grossRevenue > 0 
+    ? parseFloat(((grossProfit / grossRevenue) * 100).toFixed(2))
+    : 28.50;
 
   // 4. Delivery & Operating Costs
   const totalDeliveryFeeIncome = deliveredOrders.reduce((sum, o) => sum + (o.deliveryFee || 3.5), 0);
   const estimatedRiderWages = deliveredOrders.length * 2.0; // 2 AED per internal run
   const estimatedPlatformFee = store.subscriptionFee || 899;
   const netOperatingProfit = grossProfit + totalDeliveryFeeIncome - estimatedRiderWages - (estimatedPlatformFee / 30);
-  const netMarginPercent = grossRevenue > 0 ? (netOperatingProfit / grossRevenue) * 100 : 22.0;
+  const netMarginPercent = grossRevenue > 0 
+    ? parseFloat(((netOperatingProfit / grossRevenue) * 100).toFixed(2))
+    : 22.00;
 
   // Multi-Store comparison mock data for franchise view
   const comparisonStores = allStores.length > 0 ? allStores : [

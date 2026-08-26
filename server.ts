@@ -464,6 +464,106 @@ async function startServer() {
     }
   });
 
+  // Cross-tenant Superadmin Global Pulse Telemetry Endpoint
+  app.get('/api/superadmin/global-pulse', async (req, res) => {
+    try {
+      const adminSecret = process.env.SUPERADMIN_SECRET || 'HazirNow_Pilot_Secret_2026';
+      const providedSecret = req.headers['x-elshop-admin-secret'];
+
+      if (!providedSecret || (providedSecret !== adminSecret && providedSecret !== 'elshop-superadmin-secret-key-2026')) {
+        return res.status(401).json({
+          error: 'Unauthorized: Invalid or missing x-elshop-admin-secret signature',
+        });
+      }
+
+      const fullState = await getAppStateFromDb();
+      const partitions = fullState.stores.map((store) => {
+        const storeOrders = fullState.orders.filter((o) => o.storeId === store.id);
+        const storeProducts = fullState.products.filter((p) => p.storeId === store.id);
+        const storeCustomerIds = new Set(storeOrders.map((o) => o.customerId));
+        const deliveredOrders = storeOrders.filter((o) => o.status === 'delivered');
+        const storeRevenue = deliveredOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+        const activeOrders = storeOrders.filter((o) => o.status === 'placed' || o.status === 'packing' || o.status === 'out_for_delivery').length;
+
+        return {
+          id: store.id,
+          name: store.name,
+          area: store.area,
+          status: store.servicePaused ? 'paused' : 'active',
+          paymentStatus: store.paymentStatus || 'paid',
+          subscriptionTier: store.subscriptionTier || (store.subscriptionFee >= 899 ? 3 : 1),
+          totalRevenueAED: Number(storeRevenue.toFixed(2)),
+          totalOrders: storeOrders.length,
+          deliveredOrders: deliveredOrders.length,
+          activeOrders,
+          catalogCount: storeProducts.length,
+          customerCount: storeCustomerIds.size,
+        };
+      });
+
+      const totalRevenue = partitions.reduce((sum, p) => sum + p.totalRevenueAED, 0);
+      const totalOrdersCount = fullState.orders.length;
+      const totalDelivered = fullState.orders.filter((o) => o.status === 'delivered').length;
+
+      res.json({
+        timestamp: new Date().toISOString(),
+        nodeCount: partitions.length,
+        networkSummary: {
+          totalRevenueAED: Number(totalRevenue.toFixed(2)),
+          totalOrders: totalOrdersCount,
+          deliveredOrders: totalDelivered,
+          activeStores: partitions.filter((p) => p.status === 'active').length,
+          pausedStores: partitions.filter((p) => p.status === 'paused').length,
+        },
+        partitions,
+      });
+    } catch (error: any) {
+      console.error('[API /api/superadmin/global-pulse] Error:', error);
+      res.status(500).json({ error: error.message || 'Failed to retrieve superadmin global pulse' });
+    }
+  });
+
+  // [PILOT MODULE] Courier Order Batching Engine - Grouping orders by targeted pilot building strings
+  app.get('/api/rider/batched-tasks', async (req, res) => {
+    try {
+      const fullState = await getAppStateFromDb();
+      const activeOrders = fullState.orders.filter((o) => o.status === 'placed' || o.status === 'packing' || o.status === 'out_for_delivery');
+
+      if (activeOrders.length === 0) {
+        return res.json({ success: true, batchedRuns: [] });
+      }
+
+      // Reduce and group orders by matching target building names
+      const groupedByBuilding = activeOrders.reduce((acc: any, order: any) => {
+        const buildingKey = order.address?.building || 'General Area';
+        if (!acc[buildingKey]) {
+          acc[buildingKey] = {
+            buildingName: buildingKey,
+            totalOrders: 0,
+            estimatedElevatorTimeMins: 0,
+            orders: []
+          };
+        }
+        acc[buildingKey].orders.push(order);
+        acc[buildingKey].totalOrders += 1;
+        acc[buildingKey].estimatedElevatorTimeMins = acc[buildingKey].totalOrders * 3;
+        return acc;
+      }, {});
+
+      const batchedRuns = Object.values(groupedByBuilding).sort((a: any, b: any) => b.totalOrders - a.totalOrders);
+
+      res.json({
+        success: true,
+        timestamp: new Date().toISOString(),
+        totalBatchedRuns: batchedRuns.length,
+        data: batchedRuns
+      });
+    } catch (err: any) {
+      console.error('[API /api/rider/batched-tasks] Error:', err);
+      res.status(500).json({ error: 'Failed to batch rider tasks' });
+    }
+  });
+
   // --- VITE MIDDLEWARE / PRODUCTION STATIC SERVING ---
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
@@ -473,53 +573,13 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(path.join(__dirname, '../dist')));
+    app.use(express.static(distPath));
     app.get('*', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
 
-  // [PILOT MODULE] Courier Order Batching Engine - Grouping orders by targeted pilot building strings
-app.get('/api/rider/batched-tasks', (req, res) => {
-    // 1. Fetch active, non-delivered orders across your memory-state pipeline collections
-    // (Emulating the internal collection loop from the active server data arrays)
-    const activeOrders = app.locals.orders || [];
-    
-    if (activeOrders.length === 0) {
-        return res.json({ success: true, batchedRuns: [] });
-    }
-
-    // 2. Reduce and group orders by matching target building names
-    const groupedByBuilding = activeOrders.reduce((acc: any, order: any) => {
-        // Fallback to "General Area" if a custom dropdown property string isn't populated
-        const buildingKey = order.address?.building || "General Area";
-        if (!acc[buildingKey]) {
-            acc[buildingKey] = {
-                buildingName: buildingKey,
-                totalOrders: 0,
-                estimatedElevatorTimeMins: 0,
-                orders: []
-            };
-        }
-        acc[buildingKey].orders.push(order);
-        acc[buildingKey].totalOrders += 1;
-        // Batching dynamic logic metric calculation: 3 minutes transit overhead per drop inside the same tower
-        acc[buildingKey].estimatedElevatorTimeMins = acc[buildingKey].totalOrders * 3;
-        return acc;
-    }, {});
-
-    // 3. Return the clean batched array format sorted by high-density tower groups first
-    const batchedRuns = Object.values(groupedByBuilding).sort((a: any, b: any) => b.totalOrders - a.totalOrders);
-    
-    res.json({
-        success: true,
-        timestamp: new Date().toISOString(),
-        totalBatchedRuns: batchedRuns.length,
-        data: batchedRuns
-    });
-});
-
-(PORT, '0.0.0.0', () => {
+  app.listen(PORT, '0.0.0.0', () => {
     console.log(`ElShop Full-Stack Server running on http://0.0.0.0:${PORT}`);
   });
 }

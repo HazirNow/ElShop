@@ -17,10 +17,13 @@ import {
   TrendingUp, 
   ShieldCheck, 
   KeyRound,
+  Scale,
+  CreditCard,
+  Zap,
   Store as StoreIcon
 } from 'lucide-react';
 import { Store, Language } from '../types';
-import { useTierAccess } from '../lib/useTierAccess';
+import { useTierAccess } from '../hooks/useTierAccess';
 
 export type MerchantTab = 'board' | 'inventory' | 'customers' | 'settlement' | 'pnl' | 'staff' | 'branding';
 
@@ -40,6 +43,7 @@ interface MerchantHeaderProps {
   onOpenQuickOrderModal: () => void;
   onOpenElevatorPosterModal: () => void;
   onOpenUpgradeModal: (featureTitle?: string) => void;
+  onOpenShiftReconciliation?: () => void;
   soundEnabled: boolean;
   onToggleSound: () => void;
 }
@@ -60,6 +64,7 @@ export const MerchantHeader: React.FC<MerchantHeaderProps> = ({
   onOpenQuickOrderModal,
   onOpenElevatorPosterModal,
   onOpenUpgradeModal,
+  onOpenShiftReconciliation,
   soundEnabled,
   onToggleSound,
 }) => {
@@ -76,6 +81,24 @@ export const MerchantHeader: React.FC<MerchantHeaderProps> = ({
       return;
     }
     onTabChange(tab);
+  };
+
+  const handleShiftReconciliationClick = () => {
+    if (tierAccess.canShiftReconciliation) {
+      if (onOpenShiftReconciliation) {
+        onOpenShiftReconciliation();
+      }
+    } else {
+      onOpenUpgradeModal(isRtl ? 'مطابقة وإغلاق الصندوق اليومي (Cash Drawer Reconciliation)' : 'End-of-Shift Cash Drawer Reconciliation');
+    }
+  };
+
+  const handleCreditLimitsClick = () => {
+    if (tierAccess.canSetCreditLimits) {
+      onTabChange('customers');
+    } else {
+      onOpenUpgradeModal(isRtl ? 'تحديد سقف الدين لكل ساكن (Customer Credit Limits)' : 'Customer Credit Limits & Enforcement');
+    }
   };
 
   return (
@@ -121,6 +144,18 @@ export const MerchantHeader: React.FC<MerchantHeaderProps> = ({
                 <span>Tier {tierAccess.tier}: {isRtl ? tierAccess.tierNameAr : tierAccess.tierName}</span>
                 <span className="text-slate-400 font-normal">({tierAccess.tierFee} AED)</span>
               </button>
+
+              {/* Explicit Upgrade to Mart Callout Button for Tier 1 users */}
+              {tierAccess.isTier1 && (
+                <button
+                  type="button"
+                  onClick={() => onOpenUpgradeModal(isRtl ? 'الترقية إلى باقة المارت (Mart Plan)' : 'Upgrade to Mart Plan')}
+                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 shadow transition-all active:scale-95 cursor-pointer animate-pulse"
+                >
+                  <Zap className="w-3 h-3 text-slate-950" />
+                  <span>{isRtl ? '⚡ ترقية إلى المارت' : '⚡ Upgrade to Mart'}</span>
+                </button>
+              )}
             </div>
 
             <p className="text-xs text-slate-400 flex items-center flex-wrap gap-2 mt-1">
@@ -135,7 +170,7 @@ export const MerchantHeader: React.FC<MerchantHeaderProps> = ({
           </div>
         </div>
 
-        {/* Action Controls: Quick Order, Offline, Elevator QR, Audio */}
+        {/* Action Controls: Quick Order, Shift Reconcile, Credit Limits, Offline, Elevator QR, Audio */}
         <div className="flex flex-wrap items-center gap-2">
           {/* Quick Counter / Phone Order Button */}
           <button
@@ -145,6 +180,52 @@ export const MerchantHeader: React.FC<MerchantHeaderProps> = ({
           >
             <Plus className="w-3.5 h-3.5 text-amber-300" />
             <span>{isRtl ? '+ طلب كاونتر فوري' : '+ Quick Order'}</span>
+          </button>
+
+          {/* End Shift / Drawer Reconciliation Quick Gated Tool Button */}
+          <button
+            onClick={handleShiftReconciliationClick}
+            className={`px-3 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 border shadow-sm active:scale-95 cursor-pointer ${
+              tierAccess.canShiftReconciliation
+                ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 hover:bg-amber-500/30'
+                : 'bg-slate-900/90 text-slate-400 border-slate-700 hover:text-amber-300 hover:border-amber-500/40'
+            }`}
+            title={
+              tierAccess.canShiftReconciliation
+                ? 'Reconcile AED cash drawer with register tally'
+                : 'Tier 2 Mart feature: Unlock cash drawer reconciliation'
+            }
+          >
+            <Scale className="w-3.5 h-3.5 text-amber-400" />
+            <span>{isRtl ? 'مطابقة الصندوق' : 'Shift Reconciliation'}</span>
+            {!tierAccess.canShiftReconciliation && (
+              <span className="flex items-center gap-0.5 text-[9px] bg-amber-500/20 text-amber-300 px-1 py-0.2 rounded border border-amber-500/40">
+                <Lock className="w-2.5 h-2.5" /> Mart
+              </span>
+            )}
+          </button>
+
+          {/* Credit Limits Quick Gated Tool Button */}
+          <button
+            onClick={handleCreditLimitsClick}
+            className={`px-3 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 border shadow-sm active:scale-95 cursor-pointer ${
+              tierAccess.canSetCreditLimits
+                ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20'
+                : 'bg-slate-900/90 text-slate-400 border-slate-700 hover:text-emerald-300 hover:border-emerald-500/40'
+            }`}
+            title={
+              tierAccess.canSetCreditLimits
+                ? 'Manage customer credit limits and enforcement'
+                : 'Tier 2 Mart feature: Unlock customer credit limit enforcement'
+            }
+          >
+            <CreditCard className="w-3.5 h-3.5 text-emerald-400" />
+            <span>{isRtl ? 'سقف الديون' : 'Credit Limits'}</span>
+            {!tierAccess.canSetCreditLimits && (
+              <span className="flex items-center gap-0.5 text-[9px] bg-emerald-500/20 text-emerald-300 px-1 py-0.2 rounded border border-emerald-500/40">
+                <Lock className="w-2.5 h-2.5" /> Mart
+              </span>
+            )}
           </button>
 
           {/* Offline Sync Status Button */}
