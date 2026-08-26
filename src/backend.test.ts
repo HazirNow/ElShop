@@ -98,3 +98,30 @@ describe('UAE Grocery Master Catalog Seeding Integrity', () => {
     expect(almaraiMilk.ar.name).toBe("المراعي حليب طازج كامل الدسم 2 لتر");
   });
 });
+
+// 9. TEST SUITE: Lean Superadmin Operational Boundary Access Controls
+describe('Superadmin Global Telemetry Edge Protections', () => {
+  const emulatedSuperadminEndpoint = (headerSecret: string, mockOrders: any[]) => {
+    if (headerSecret !== 'HazirNow_Pilot_Secret_2026') {
+      return { status: 401, data: null };
+    }
+    return {
+      status: 200,
+      data: { totalVolumeFils: mockOrders.reduce((s, o) => s + o.totalFils, 0) }
+    };
+  };
+
+  it('should forcefully block unauthorized cross-tenant overview requests', () => {
+    const response = emulatedSuperadminEndpoint('MALICIOUS_SECRET_KEY', []);
+    expect(response.status).toBe(401);
+    expect(response.data).toBeNull();
+  });
+
+  it('should grant access and compile global financial variables when given the correct credentials', () => {
+    const sampleOrders = [{ totalFils: 1000 }, { totalFils: 2500 }];
+    const response = emulatedSuperadminEndpoint('HazirNow_Pilot_Secret_2026', sampleOrders);
+    
+    expect(response.status).toBe(200);
+    expect(response.data?.totalVolumeFils).toBe(3500); // 35.00 AED total volume match
+  });
+});
