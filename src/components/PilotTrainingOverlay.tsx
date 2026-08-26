@@ -1,8 +1,11 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
+import { Sparkles, Gamepad2 } from 'lucide-react';
+import { InteractiveSimulationEngine } from './InteractiveSimulationEngine';
 
 // [PILOT COMPONENT] On-Screen Dynamic Training Overlay for 10-Store Stakeholders
 export function PilotTrainingOverlay({ currentRole }: { currentRole: string }) {
   const [isVisible, setIsVisible] = useState(true);
+  const [isSimOpen, setIsSimOpen] = useState(false);
 
   if (!isVisible) return null;
 
@@ -27,31 +30,53 @@ export function PilotTrainingOverlay({ currentRole }: { currentRole: string }) {
   const steps = trainingSteps[currentRole.toLowerCase()] || [];
   if (steps.length === 0) return null;
 
+  const roleParam = (currentRole.toLowerCase() === 'merchant' || currentRole.toLowerCase() === 'rider')
+    ? currentRole.toLowerCase() as 'merchant' | 'rider'
+    : 'customer';
+
   return (
-    <div className="bg-slate-900 text-slate-100 p-4 border-b border-slate-800 shadow-sm print:hidden">
-      <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <span className="animate-pulse h-2 w-2 rounded-full bg-amber-400"></span>
-            <h4 className="text-xs font-black tracking-wider uppercase text-amber-400">
-              🚀 Interactive {currentRole} Training Script
-            </h4>
+    <>
+      <div className="bg-slate-900 text-slate-100 p-3 sm:p-4 border-b border-slate-800 shadow-sm print:hidden">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <span className="animate-pulse h-2 w-2 rounded-full bg-amber-400"></span>
+              <h4 className="text-xs font-black tracking-wider uppercase text-amber-400">
+                🚀 Interactive {currentRole} Training Script
+              </h4>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mt-2">
+              {steps.map((step, idx) => (
+                <p key={idx} className="text-[11px] font-medium leading-relaxed text-slate-300">
+                  {step}
+                </p>
+              ))}
+            </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mt-2">
-            {steps.map((step, idx) => (
-              <p key={idx} className="text-[11px] font-medium leading-relaxed text-slate-300">
-                {step}
-              </p>
-            ))}
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => setIsSimOpen(true)}
+              className="text-xs font-black bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 px-3 py-1.5 rounded-xl shadow-md flex items-center gap-1.5 transition transform hover:scale-105 active:scale-95"
+            >
+              <Gamepad2 className="w-3.5 h-3.5" />
+              <span>🎮 Practice Simulator</span>
+            </button>
+            <button 
+              onClick={() => setIsVisible(false)}
+              className="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white px-2 py-1 rounded-lg transition"
+            >
+              Hide Guide
+            </button>
           </div>
         </div>
-        <button 
-          onClick={() => setIsVisible(false)}
-          className="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white px-2 py-1 rounded transition shrink-0"
-        >
-          Hide Guide
-        </button>
       </div>
-    </div>
+
+      <InteractiveSimulationEngine
+        initialRole={roleParam}
+        isOpen={isSimOpen}
+        onClose={() => setIsSimOpen(false)}
+      />
+    </>
   );
 }
+

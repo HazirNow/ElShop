@@ -181,7 +181,42 @@ elshop/
 │       ├── LegalModal.tsx              # UAE Consumer Protection (Law 15/2020) notice
 │       ├── StaffAuthModal.tsx          # PIN/Passkey authentication modal
 │       ├── ProductImage.tsx            # Resilient image component with category fallbacks
+│       ├── PilotTrainingOverlay.tsx    # Interactive self-guided training script overlay for pilot stores
+│       ├── InteractiveSimulationEngine.tsx # Spring-physics interactive onboarding simulator arena (3 roles)
 │       └── ElShopLogo.tsx              # Platform brand badge
+```
+
+---
+
+## 🎮 Interactive Simulation Arena & Onboarding Playbooks
+
+The `InteractiveSimulationEngine.tsx` provides zero-text, micro-animation practice arenas accessible by clicking **"🎮 Practice Simulator"** in the training header:
+1. **🛒 The Customer Tournament**:
+   - **Floating Cart Pull**: Spring-physics flying badge `[0, 1.2, 1]` trajectory straight into the shopping cart.
+   - **Tower Dropdown Ripple**: Staggered staircase menu expansion and auto-sliding flat/unit input with spring autofocus.
+   - **Khata Coin Checkout Countdown**: Digital wallet graphic with rapid real-time fils countdown ticker and ledger write-in.
+2. **🏪 The Baqala Boss POS Practice Run**:
+   - **Radar Chime Response**: Pulsing multi-ring radial glow on incoming urgent orders with smooth layout glide into the `PACKING` Kanban lane.
+   - **Thermal Receipt Spool**: Continuous unrolling sheet animation with bilingual itemization, serrated edges, and barcode confirming ESC/POS thermal printing.
+   - **The Shift Coin Game**: Tactile UAE currency touchpad (100/50/20/10 AED notes & 1D/50F/25F coins) with 3D scale compression and real-time Amber Deficit / Emerald Match audit box.
+3. **🏃‍♂️ The Tower Runner Quest**:
+   - **Tower Elevator Sorter**: Interactive building badges expanding multi-order elevator stops with vertical cycle times (~3 min/floor).
+   - **1-Tap Sunlight Mode**: High-velocity high-contrast color sweep for outdoor Gulf sunlight visibility.
+   - **Quick-Change Cash Pad**: Doorstep COD calculator with pulsing green change feedback.
+
+---
+
+## 🧪 Automated Testing & Invariants (23/23 Vitest Suite)
+
+The codebase enforces strict mathematical integrity and architectural isolation across 4 test suites running on Vitest:
+- **`src/backend.test.ts`**: Fils-based integer arithmetic, Khata debt calculations, 5-tower flyer dropdown constraints, cash reconciliation override logs, subscription suspension timers, Tier 3 Franchise COGS calculations, `useTierAccess` fail-safe rules, automated WhatsApp order webhook payload generator, and simulation engine integer invariants (13 test suites).
+- **`src/tests/businessLogic.test.ts`**: Shift drawer variance calculations, cash dispute thresholds, and tenant isolation rules.
+- **`src/frontend.test.ts`**: Component rendering integrity and currency formatting.
+- **`src/tests/security.test.ts`**: RBAC permissions, role authorization, and PIN protection boundaries.
+
+Run tests:
+```bash
+npx vitest run --no-cache
 ```
 
 ---

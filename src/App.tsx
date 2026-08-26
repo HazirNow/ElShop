@@ -39,6 +39,7 @@ import { LegalModal } from './components/LegalModal';
 import { MerchantLandingModal } from './components/MerchantLandingModal';
 import { ProductImage } from './components/ProductImage';
 import { ElShopLogo } from './components/ElShopLogo';
+import { PilotTrainingOverlay } from './components/PilotTrainingOverlay';
 import { getTranslation } from './translations';
 
 export default function App() {
@@ -350,6 +351,9 @@ export default function App() {
           </button>
         </div>
       </div>
+
+      {/* Dynamic Role Training Script Overlay */}
+      <PilotTrainingOverlay currentRole={activeRole} />
 
       {/* --- TOP STORE BRANDING HEADER (Customer / Merchant / Rider) --- */}
       {activeRole !== 'admin' && (

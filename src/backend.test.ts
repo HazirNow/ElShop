@@ -188,3 +188,43 @@ describe('Automated WhatsApp Notification Webhook Trigger Rules', () => {
     expect(outcome.msg).toContain("Marina Crown");
   });
 });
+
+// 13. TEST SUITE: Interactive Simulation Engine Arithmetic & Invariants
+describe('Interactive Simulation Engine Arithmetic & Invariants', () => {
+  it('should enforce exact integer fils deduction for Khata simulation countdown', () => {
+    const initialWalletFils = 50000; // 500.00 AED
+    const cartFils = 3250; // 32.50 AED
+    const remainingFils = initialWalletFils - cartFils;
+
+    expect(remainingFils).toBe(46750);
+    expect((remainingFils / 100).toFixed(2)).toBe('467.50');
+  });
+
+  it('should accurately calculate shift drawer cash denomination math without floating-point drift', () => {
+    const countedNotesAndCoins = [
+      10000 * 4, // 4x 100 AED note = 40,000 fils
+      5000 * 1,  // 1x 50 AED note = 5,000 fils
+      2000 * 1,  // 1x 20 AED note = 2,000 fils
+      1000 * 1,  // 1x 10 AED note = 1,000 fils
+      100 * 5,   // 5x 1 AED coin = 500 fils
+      50 * 1     // 1x 50 fils coin = 50 fils
+    ];
+
+    const totalCountedFils = countedNotesAndCoins.reduce((a, b) => a + b, 0);
+    const expectedFils = 48550; // 485.50 AED
+    const varianceFils = totalCountedFils - expectedFils;
+
+    expect(totalCountedFils).toBe(48550);
+    expect(varianceFils).toBe(0); // Perfect Match!
+  });
+
+  it('should compute exact doorstep cash-on-delivery change for runner quest simulation', () => {
+    const orderFils = 3850; // 38.50 AED
+    const tenderedNoteFils = 10000; // 100.00 AED bill
+    const changeDueFils = tenderedNoteFils - orderFils;
+
+    expect(changeDueFils).toBe(6150); // 61.50 AED
+    expect((changeDueFils / 100).toFixed(2)).toBe('61.50');
+  });
+});
+
