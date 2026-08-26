@@ -479,10 +479,51 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
+  // [PILOT MODULE] Courier Order Batching Engine - Grouping orders by targeted pilot building strings
+app.get('/api/rider/batched-tasks', (req, res) => {
+    // 1. Fetch active, non-delivered orders across your memory-state pipeline collections
+    // (Emulating the internal collection loop from the active server data arrays)
+    const activeOrders = app.locals.orders || [];
+    
+    if (activeOrders.length === 0) {
+        return res.json({ success: true, batchedRuns: [] });
+    }
+
+    // 2. Reduce and group orders by matching target building names
+    const groupedByBuilding = activeOrders.reduce((acc: any, order: any) => {
+        // Fallback to "General Area" if a custom dropdown property string isn't populated
+        const buildingKey = order.address?.building || "General Area";
+        if (!acc[buildingKey]) {
+            acc[buildingKey] = {
+                buildingName: buildingKey,
+                totalOrders: 0,
+                estimatedElevatorTimeMins: 0,
+                orders: []
+            };
+        }
+        acc[buildingKey].orders.push(order);
+        acc[buildingKey].totalOrders += 1;
+        // Batching dynamic logic metric calculation: 3 minutes transit overhead per drop inside the same tower
+        acc[buildingKey].estimatedElevatorTimeMins = acc[buildingKey].totalOrders * 3;
+        return acc;
+    }, {});
+
+    // 3. Return the clean batched array format sorted by high-density tower groups first
+    const batchedRuns = Object.values(groupedByBuilding).sort((a: any, b: any) => b.totalOrders - a.totalOrders);
+    
+    res.json({
+        success: true,
+        timestamp: new Date().toISOString(),
+        totalBatchedRuns: batchedRuns.length,
+        data: batchedRuns
+    });
+});
+
+(PORT, '0.0.0.0', () => {
     console.log(`ElShop Full-Stack Server running on http://0.0.0.0:${PORT}`);
   });
 }
 
 startServer();
+
 

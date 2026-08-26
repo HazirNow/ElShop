@@ -1,0 +1,4 @@
+﻿"Timestamp (UTC)","Expected Amt (AED)","Actual Cash (AED)","Variance (AED)","Audit Status","Merchant Reason"
+"2026-08-25T10:14:22Z","100.00","84.50","-15.50","⚠️ DEFICIT","Register missing float cash"
+"2026-08-25T18:45:10Z","250.00","250.00","0.00","✅ BALANCED","End of shift exact match"
+"2026-08-26T06:30:05Z","150.00","142.00","-8.00","⚠️ DEFICIT","Customer dispute short change"

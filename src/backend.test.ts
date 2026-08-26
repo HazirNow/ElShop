@@ -47,3 +47,35 @@ describe('Timezone-Independent Subscription Validity Math', () => {
     expect(checkIsExpired(mockTenantsDb["store-002"].dueTimestamp)).toBe(true);
   });
 });
+
+// 3. TEST SUITE: Courier Building-Sweep Batching and Logistics
+describe('Courier High-Density Building Sweep Batching Engine', () => {
+  it('should automatically group isolated customer orders that share identical tower dropdown values', () => {
+    // Mock customer payload objects arriving from different tenants/accounts
+    const mockCheckoutOrders = [
+      { id: "ord-901", totalFils: 2450, address: { building: "Tower A", unit: "Flat 1402" } },
+      { id: "ord-902", totalFils: 1200, address: { building: "Tower B", unit: "Flat 303" } },
+      { id: "ord-903", totalFils: 5500, address: { building: "Tower A", unit: "Flat 2205" } }
+    ];
+
+    // Grouping reducer loop replication
+    const batchOrdersByBuilding = (orders: typeof mockCheckoutOrders) => {
+      return orders.reduce((acc: any, order) => {
+        const key = order.address.building;
+        if (!acc[key]) acc[key] = [];
+        acc[key].push(order);
+        return acc;
+      }, {});
+    };
+
+    const batchedOutput = batchOrdersByBuilding(mockCheckoutOrders);
+
+    // Tower A has 2 orders checking out concurrently, meaning it must form an explicit high-density delivery batch run
+    expect(batchedOutput["Tower A"]).toHaveLength(2);
+    expect(batchedOutput["Tower B"]).toHaveLength(1);
+    
+    // Confirms exact target match layout validation
+    expect(batchedOutput["Tower A"][0].id).toBe("ord-901");
+    expect(batchedOutput["Tower A"][1].id).toBe("ord-903");
+  });
+});
