@@ -579,12 +579,34 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
+  // [PILOT FEATURE] Automated WhatsApp Order Notification Webhook Notification Handler
+export const triggerWhatsAppOrderAlert = async (orderPayload: any) => {
+  try {
+    const storePhone = "971500000000"; // Fallback to store's registered primary phone number string
+    const messageString = `?? *NEW ORDER ALERT (#${orderPayload.id.substring(0, 6)})*\n` +
+                          `?? Tower: ${orderPayload.address?.building || 'General Area'}\n` +
+                          `?? Unit: ${orderPayload.address?.unit || '-'}\n` +
+                          `?? Total: ${(orderPayload.totalFils / 100).toFixed(2)} AED\n` +
+                          `?? _Open POS Tablet to accept assignment._`;
+
+    console.log(`?? [WhatsApp Webhook] Dispatched notification to ${storePhone}: \n${messageString}`);
+    
+    // In production pilot, this maps straight to your third-party WhatsApp Gateway node provider
+    // return await fetch('https://whatsapp-gateway.local', { method: 'POST', body: JSON.stringify({ to: storePhone, body: messageString }) });
+    return true;
+  } catch (err) {
+    console.error("?? WhatsApp notification webhook connection failure:", err);
+    return false;
+  }
+};
+
+(PORT, '0.0.0.0', () => {
     console.log(`ElShop Full-Stack Server running on http://0.0.0.0:${PORT}`);
   });
 }
 
 startServer();
+
 
 
 

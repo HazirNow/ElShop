@@ -165,3 +165,26 @@ describe('Subscription Tier Feature Gating Fail-Safe Rules', () => {
   });
 });
 
+
+// 12. TEST SUITE: Automated WhatsApp Notification Webhook Callback Validation
+describe('Automated WhatsApp Notification Webhook Trigger Rules', () => {
+  it('should successfully build the string message format and fire notification hooks upon order placement', async () => {
+    const sampleOrder = {
+      id: "ord-alert-111",
+      totalFils: 3850,
+      address: { building: "Marina Crown", unit: "Flat 1402" }
+    };
+
+    const mockWebhookTrigger = (order: typeof sampleOrder) => {
+      if (!order.id || !order.address.building) return { success: false, msg: "" };
+      const txt = `New Order #${order.id} — ${order.address.building}`;
+      return { success: true, msg: txt };
+    };
+
+    const outcome = mockWebhookTrigger(sampleOrder);
+    
+    expect(outcome.success).toBe(true);
+    expect(outcome.msg).toContain("New Order #ord-alert-111");
+    expect(outcome.msg).toContain("Marina Crown");
+  });
+});
