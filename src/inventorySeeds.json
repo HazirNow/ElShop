@@ -1,4 +1,4 @@
-﻿{
+{
   "uaeMasterCatalog": [
     { "id": "m-001", "sku": "ALMARAI-MILK-2L", "barcode": "6281007001254", "category": "Dairy", "priceFils": 1100, "en": { "name": "Almarai Fresh Milk Full Cream 2L", "unit": "Bottle" }, "ar": { "name": "المراعي حليب طازج كامل الدسم 2 لتر", "unit": "زجاجة" } },
     { "id": "m-002", "sku": "INDOMIE-CHIX-5", "barcode": "089686043132",  "category": "Pantry", "priceFils": 650,  "en": { "name": "Indomie Chicken Flavor Noodles 5-Pack", "unit": "Pack" }, "ar": { "name": "إندومي شعيرية بنكهة الدجاج 5 حبات", "unit": "ربطة" } },

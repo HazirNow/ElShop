@@ -79,3 +79,22 @@ describe('Courier High-Density Building Sweep Batching Engine', () => {
     expect(batchedOutput["Tower A"][1].id).toBe("ord-903");
   });
 });
+
+// 4. TEST SUITE: UAE Grocery Master Catalog Data Verification
+describe('UAE Grocery Master Catalog Seeding Integrity', () => {
+  it('should accurately parse and validate real-world FMCG product arrays priced in fils', () => {
+    // Dynamically load your actual written seed file to inspect structural health
+    const catalogData = JSON.parse(require('fs').readFileSync('src/inventorySeeds.json', 'utf8'));
+    
+    expect(catalogData.uaeMasterCatalog).toBeDefined();
+    expect(catalogData.uaeMasterCatalog.length).toBeGreaterThan(0);
+
+    // Verify Almarai Milk is mapped precisely with standard UAE barcode profiles
+    const almaraiMilk = catalogData.uaeMasterCatalog.find((p: any) => p.sku === "ALMARAI-MILK-2L");
+    expect(almaraiMilk).toBeDefined();
+    expect(almaraiMilk.barcode).toBe("6281007001254");
+    expect(almaraiMilk.priceFils).toBe(1100); // 11.00 AED exact pricing check
+    expect(almaraiMilk.en.name).toContain("Almarai");
+    expect(almaraiMilk.ar.name).toBe("المراعي حليب طازج كامل الدسم 2 لتر");
+  });
+});
