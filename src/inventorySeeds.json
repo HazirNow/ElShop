@@ -1,59 +1,15 @@
 ﻿{
-  "stores": [
-    {
-      "storeId": "store-001",
-      "storeName": "Al Madina Fresh Grocer",
-      "inventory": [
-        { "id": "prod-101", "sku": "MD-MILK-1L", "category": "Dairy", "priceFils": 600, "en": { "name": "Al Rawabi Fresh Milk 1L", "unit": "Bottle" }, "ar": { "name": "الروابي حليب طازج 1 لتر", "unit": "زجاجة" } },
-        { "id": "prod-102", "sku": "MD-BREAD-W", "category": "Bakery", "priceFils": 450, "en": { "name": "Modern Bakery White Sliced Bread", "unit": "Pack" }, "ar": { "name": "مخبز الحديث خبز أبيض شرائح", "unit": "ربطة" } },
-        { "id": "prod-103", "sku": "MD-EGGS-30", "category": "Dairy", "priceFils": 1650, "en": { "name": "Local Fresh White Eggs 30 Pcs", "unit": "Tray" }, "ar": { "name": "بيض أبيض طازج محلي 30 حبة", "unit": "طبق" } },
-        { "id": "prod-104", "sku": "MD-WATER-6", "category": "Beverages", "priceFils": 750, "en": { "name": "Al Ain Bottled Water 6x1.5L", "unit": "Shrink" }, "ar": { "name": "مياه العين معبأة 6×1.5 لتر", "unit": "مجموعة" } },
-        { "id": "prod-105", "sku": "MD-TOMATO-1", "category": "Produce", "priceFils": 525, "en": { "name": "Local Tomato", "unit": "1 kg" }, "ar": { "name": "طماطم محلي", "unit": "1 كجم" } },
-        { "id": "prod-106", "sku": "MD-ONION-1", "category": "Produce", "priceFils": 375, "en": { "name": "Red Onion", "unit": "1 kg" }, "ar": { "name": "بصل أحمر", "unit": "1 كجم" } },
-        { "id": "prod-107", "sku": "MD-RICE-5", "category": "Pantry", "priceFils": 2800, "en": { "name": "India Gate Basmati Rice 5kg", "unit": "Bag" }, "ar": { "name": "أرز بسمتي بوابة الهند 5 كجم", "unit": "كيس" } },
-        { "id": "prod-108", "sku": "MD-OIL-1", "category": "Pantry", "priceFils": 1250, "en": { "name": "Afia Corn Oil 1.5L", "unit": "Bottle" }, "ar": { "name": "عافية زيت ذرة 1.5 لتر", "unit": "زجاجة" } },
-        { "id": "prod-109", "sku": "MD-SUGAR-2", "category": "Pantry", "priceFils": 650, "en": { "name": "Al Khaleej Sugar 2kg", "unit": "Pack" }, "ar": { "name": "الخليج سكر 2 كجم", "unit": "كيس" } },
-        { "id": "prod-110", "sku": "MD-TEA-100", "category": "Beverages", "priceFils": 1100, "en": { "name": "Lipton Yellow Label 100 Tea Bags", "unit": "Box" }, "ar": { "name": "ليبتون العلامة الصفراء 100 كيس شاي", "unit": "علبة" } }
-      ]
-    },
-    {
-      "storeId": "store-002",
-      "storeName": "Marina Heights MiniMart",
-      "inventory": [
-        { "id": "prod-201", "sku": "MH-MILK-1L", "category": "Dairy", "priceFils": 625, "en": { "name": "Lacnor Full Cream Milk 1L", "unit": "Bottle" }, "ar": { "name": "لاكنور حليب كامل الدسم 1 لتر", "unit": "زجاجة" } },
-        { "id": "prod-202", "sku": "MH-BREAD-B", "category": "Bakery", "priceFils": 500, "en": { "name": "Yaumi Brown Sliced Bread", "unit": "Pack" }, "ar": { "name": "يومي خبز أسمر شرائح", "unit": "ربطة" } },
-        { "id": "prod-203", "sku": "MH-LABNEH-1", "category": "Dairy", "priceFils": 950, "en": { "name": "Almarai Turkish Labneh 400g", "unit": "Tub" }, "ar": { "name": "المراعي لبنة تركية 400 جرام", "unit": "علبة" } },
-        { "id": "prod-204", "sku": "MH-WATER-24", "category": "Beverages", "priceFils": 1050, "en": { "name": "Mai Dubai Water 24x200ml", "unit": "Carton" }, "ar": { "name": "ماي دبي مياه 24×200 مل", "unit": "كرتون" } },
-        { "id": "prod-205", "sku": "MH-BANANA-1", "category": "Produce", "priceFils": 650, "en": { "name": "Chiquita Bananas", "unit": "1 kg" }, "ar": { "name": "موز تشيكيتا", "unit": "1 كجم" } },
-        { "id": "prod-206", "sku": "MH-POTATO-1", "category": "Produce", "priceFils": 420, "en": { "name": "Local Potatoes", "unit": "1 kg" }, "ar": { "name": "بطاطس محلي", "unit": "1 كجم" } },
-        { "id": "prod-207", "sku": "MH-ATT-5", "category": "Pantry", "priceFils": 1950, "en": { "name": "Chakki Fresh Atta Flour 5kg", "unit": "Bag" }, "ar": { "name": "دقيق تشاكي طازج عطا 5 كجم", "unit": "كيس" } },
-        { "id": "prod-208", "sku": "MH-TUNA-3", "category": "Pantry", "priceFils": 1400, "en": { "name": "California Gardens Tuna 3x170g", "unit": "Pack" }, "ar": { "name": "حدائق كاليفورنيا تونة 3×170 جرام", "unit": "مجموعة" } },
-        { "id": "prod-209", "sku": "MH-CHIPS-XL", "category": "Snacks", "priceFils": 550, "en": { "name": "Lay's Salted Potato Chips XL", "unit": "Bag" }, "ar": { "name": "رقائق بطاطس ليز مملحة حجم كبير", "unit": "كيس" } },
-        { "id": "prod-210", "sku": "MH-COKE-6", "category": "Beverages", "priceFils": 1500, "en": { "name": "Coca-Cola Original 6x330ml", "unit": "Pack" }, "ar": { "name": "كوكاكولا الأصلي 6×330 مل", "unit": "مجموعة" } }
-      ]
-    },
-    {
-      "storeId": "store-003",
-      "storeName": "JLT Oasis Supermarket",
-      "inventory": [
-        { "id": "prod-301", "sku": "JL-YOG-1", "category": "Dairy", "priceFils": 550, "en": { "name": "Almarai Fresh Yogurt 1kg", "unit": "Tub" }, "ar": { "name": "المراعي زبادي طازج 1 كجم", "unit": "علبة" } },
-        { "id": "prod-302", "sku": "JL-CROIS-5", "category": "Bakery", "priceFils": 750, "en": { "name": "Eurocake Croissants Milk 5x50g", "unit": "Pack" }, "ar": { "name": "يوروكيك كرواسون بالحليب 5×50 جرام", "unit": "ربطة" } },
-        { "id": "prod-303", "sku": "JL-CHEESE-P", "category": "Dairy", "priceFils": 1425, "en": { "name": "Puck Cheese Spread 500g", "unit": "Jar" }, "ar": { "name": "بوك جبنة قابلة للدهن 500 جرام", "unit": "برطمان" } },
-        { "id": "prod-304", "sku": "JL-JUICE-1", "category": "Beverages", "priceFils": 850, "en": { "name": "Almarai Orange Juice Fresh 1L", "unit": "Bottle" }, "ar": { "name": "المراعي عصير برتقال طازج 1 لتر", "unit": "زجاجة" } },
-        { "id": "prod-305", "sku": "JL-APPLE-1", "category": "Produce", "priceFils": 795, "en": { "name": "Royal Gala Apples", "unit": "1 kg" }, "ar": { "name": "تفاح رويال غالا", "unit": "1 كجم" } },
-        { "id": "prod-306", "sku": "JL-CUCUM-1", "category": "Produce", "priceFils": 450, "en": { "name": "Local Cucumber", "unit": "1 kg" }, "ar": { "name": "خيار محلي", "unit": "1 كجم" } },
-        { "id": "prod-307", "sku": "JL-PASTA-3", "category": "Pantry", "priceFils": 900, "en": { "name": "Emirates Macaroni Premium 3x400g", "unit": "Pack" }, "ar": { "name": "معكرونة الإمارات ممتازة 3×400 جرام", "unit": "مجموعة" } },
-        { "id": "prod-308", "sku": "JL-KETCH-1", "category": "Pantry", "priceFils": 1150, "en": { "name": "Heinz Tomato Ketchup 910g", "unit": "Squeeze" }, "ar": { "name": "هاينز كاتشب طماطم 910 جرام", "unit": "عبوة" } },
-        { "id": "prod-309", "sku": "JL-BISCUIT", "category": "Snacks", "priceFils": 450, "en": { "name": "Tiffany Glucose Biscuits 3x40g", "unit": "Pack" }, "ar": { "name": "تيفاني بسكويت جلوكوز 3×40 جرام", "unit": "مجموعة" } },
-        { "id": "prod-310", "sku": "JL-COFFEE-M", "category": "Beverages", "priceFils": 2450, "en": { "name": "Nescafe Red Cup Coffee 100g", "unit": "Jar" }, "ar": { "name": "نيسكافيه شاي أحمر قهوة 100 جرام", "unit": "برطمان" } }
-      ]
-    },
-    { "storeId": "store-004", "storeName": "Al Barsha Corner Grocery", "inventory": [] },
-    { "storeId": "store-005", "storeName": "Tecom Market Lane", "inventory": [] },
-    { "storeId": "store-006", "storeName": "Business Bay Express Grocery", "inventory": [] },
-    { "storeId": "store-007", "storeName": "Downtown Boulevard Mart", "inventory": [] },
-    { "storeId": "store-008", "storeName": "Karama Heritage Foodstuff", "inventory": [] },
-    { "storeId": "store-009", "storeName": "Deira Clocktower Grocers", "inventory": [] },
-    { "storeId": "store-010", "storeName": "Silicon Oasis Hub Supermarket", "inventory": [] }
-  ]
+  "uaeMasterCatalog": [
+    { "id": "m-001", "sku": "ALMARAI-MILK-2L", "barcode": "6281007001254", "category": "Dairy", "priceFils": 1100, "en": { "name": "Almarai Fresh Milk Full Cream 2L", "unit": "Bottle" }, "ar": { "name": "المراعي حليب طازج كامل الدسم 2 لتر", "unit": "زجاجة" } },
+    { "id": "m-002", "sku": "INDOMIE-CHIX-5", "barcode": "089686043132",  "category": "Pantry", "priceFils": 650,  "en": { "name": "Indomie Chicken Flavor Noodles 5-Pack", "unit": "Pack" }, "ar": { "name": "إندومي شعيرية بنكهة الدجاج 5 حبات", "unit": "ربطة" } },
+    { "id": "m-003", "sku": "MAI-DUBAI-1.5", "barcode": "6297000623041", "category": "Beverages", "priceFils": 150,  "en": { "name": "Mai Dubai Drinking Water 1.5L", "unit": "Bottle" }, "ar": { "name": "ماي دبي مياه شرب 1.5 لتر", "unit": "زجاجة" } },
+    { "id": "m-004", "sku": "LIPTON-YELLOW-50", "barcode": "6281006114191", "category": "Beverages", "priceFils": 700,  "en": { "name": "Lipton Yellow Label 50 Tea Bags", "unit": "Box" }, "ar": { "name": "ليبتون العلامة الصفراء 50 كيس شاي", "unit": "علبة" } },
+    { "id": "m-005", "sku": "COKE-CAN-330",   "barcode": "5449000000996", "category": "Beverages", "priceFils": 250,  "en": { "name": "Coca-Cola Original Taste 330ml Can", "unit": "Can" }, "ar": { "name": "كوكاكولا الطعم الأصلي 330 مل علبة", "unit": "علبة" } },
+    { "id": "m-006", "sku": "ALMARAI-YOG-400", "barcode": "6281007000103", "category": "Dairy", "priceFils": 325,  "en": { "name": "Almarai Fresh Yogurt 400g", "unit": "Tub" }, "ar": { "name": "المراعي زبادي طازج 400 جرام", "unit": "علبة" } },
+    { "id": "m-007", "sku": "SADIA-BREAST-1",  "barcode": "7891515431102", "category": "Frozen", "priceFils": 2450, "en": { "name": "Sadia Chicken Breast Tender 1kg", "unit": "Bag" }, "ar": { "name": "ساديا صدور دجاج طرية 1 كجم", "unit": "كيس" } },
+    { "id": "m-008", "sku": "PUCK-JAR-500",   "barcode": "5707196168123", "category": "Dairy", "priceFils": 1550, "en": { "name": "Puck Cream Cheese Spread 500g", "unit": "Jar" }, "ar": { "name": "بوك جبنة كريم قابلة للدهن 500 جرام", "unit": "برطمان" } },
+    { "id": "m-009", "sku": "LAYS-SALT-M",     "barcode": "6281015501302", "category": "Snacks", "priceFils": 300,  "en": { "name": "Lay's Salted Potato Chips Medium", "unit": "Bag" }, "ar": { "name": "ليز رقائق بطاطس مملحة حجم متوسط", "unit": "كيس" } },
+    { "id": "m-010", "sku": "KRAFT-CHEDDAR",   "barcode": "7622300735122", "category": "Dairy", "priceFils": 575,  "en": { "name": "Kraft Cheddar Cheese Can 100g", "unit": "Can" }, "ar": { "name": "كرافت جبنة شيدر علبة 100 جرام", "unit": "علبة" } }
+  ],
+  "stores": []
 }
