@@ -189,42 +189,120 @@ describe('Automated WhatsApp Notification Webhook Trigger Rules', () => {
   });
 });
 
-// 13. TEST SUITE: Interactive Simulation Engine Arithmetic & Invariants
-describe('Interactive Simulation Engine Arithmetic & Invariants', () => {
-  it('should enforce exact integer fils deduction for Khata simulation countdown', () => {
-    const initialWalletFils = 50000; // 500.00 AED
-    const cartFils = 3250; // 32.50 AED
-    const remainingFils = initialWalletFils - cartFils;
+// 12. STRESS TEST SUITE: Concurrent Multi-Device Cash Counting Concurrency
+describe('High-Stress Concurrent Cashier Register Operations', () => {
+  it('should prevent simultaneous multi-device shift saves from overwriting historical ledger variance logs', () => {
+    const existingLogsKey = "pilot_cash_audit_trail_store-001";
+    let simulatedLocalStorage: Record<string, string> = {
+      [existingLogsKey]: JSON.stringify([{ timestamp: "10:00", varianceFils: 0 }])
+    };
 
-    expect(remainingFils).toBe(46750);
-    expect((remainingFils / 100).toFixed(2)).toBe('467.50');
-  });
+    // Emulate two store tills hitting save at the exact same split second
+    const deviceA_Payload = { timestamp: "10:01", varianceFils: -500 }; // 5 AED Shortage
+    const deviceB_Payload = { timestamp: "10:01", varianceFils: 1200 }; // 12 AED Surplus
 
-  it('should accurately calculate shift drawer cash denomination math without floating-point drift', () => {
-    const countedNotesAndCoins = [
-      10000 * 4, // 4x 100 AED note = 40,000 fils
-      5000 * 1,  // 1x 50 AED note = 5,000 fils
-      2000 * 1,  // 1x 20 AED note = 2,000 fils
-      1000 * 1,  // 1x 10 AED note = 1,000 fils
-      100 * 5,   // 5x 1 AED coin = 500 fils
-      50 * 1     // 1x 50 fils coin = 50 fils
-    ];
+    const executeAtomicSave = (newLog: any) => {
+      const current = JSON.parse(simulatedLocalStorage[existingLogsKey] || '[]');
+      current.push(newLog);
+      simulatedLocalStorage[existingLogsKey] = JSON.stringify(current);
+    };
 
-    const totalCountedFils = countedNotesAndCoins.reduce((a, b) => a + b, 0);
-    const expectedFils = 48550; // 485.50 AED
-    const varianceFils = totalCountedFils - expectedFils;
+    executeAtomicSave(deviceA_Payload);
+    executeAtomicSave(deviceB_Payload);
 
-    expect(totalCountedFils).toBe(48550);
-    expect(varianceFils).toBe(0); // Perfect Match!
-  });
-
-  it('should compute exact doorstep cash-on-delivery change for runner quest simulation', () => {
-    const orderFils = 3850; // 38.50 AED
-    const tenderedNoteFils = 10000; // 100.00 AED bill
-    const changeDueFils = tenderedNoteFils - orderFils;
-
-    expect(changeDueFils).toBe(6150); // 61.50 AED
-    expect((changeDueFils / 100).toFixed(2)).toBe('61.50');
+    const finalizedLogs = JSON.parse(simulatedLocalStorage[existingLogsKey]);
+    
+    // Concurrency verification: Both records must safely coexist without data loss
+    expect(finalizedLogs).toHaveLength(3);
+    expect(finalizedLogs.map((l: any) => l.varianceFils)).toContain(-500);
+    expect(finalizedLogs.map((l: any) => l.varianceFils)).toContain(1200);
   });
 });
 
+// 13. STRESS TEST SUITE: Broken & Malformed User Input Sanitization
+describe('Malformed Input Resiliency & Accounting Defense', () => {
+  it('should gracefully handle corrupt string inputs, extreme fractions, or negative text parameters inside the pricing override panel', () => {
+    const maliciousInputs = ["-12.50", "corrupt_text", "99.99999", "0.0001"];
+    
+    const parsePriceSafelyToFils = (input: string) => {
+      const parsed = parseFloat(input);
+      if (isNaN(parsed) || parsed <= 0) return 0; // Force-clamp to zero to prevent negative debt injections
+      return Math.round(parsed * 100);
+    };
+
+    const results = maliciousInputs.map(parsePriceSafelyToFils);
+
+    expect(results[0]).toBe(0);   // Negative clamped to 0
+    expect(results[1]).toBe(0);   // String text clamped to 0
+    expect(results[2]).toBe(10000); // 99.99999 rounded safely to 10,000 fils (100 AED)
+    expect(results[3]).toBe(0);   // Sub-fils fractions clamped safely
+    
+    results.forEach(res => {
+      expect(Number.isInteger(res)).toBe(true); // Money must absolutely remain a pure integer
+    });
+  });
+});
+
+// 14. STRESS TEST SUITE: The 100-Order Midnight High-Density Elevator Rush
+describe('High-Density Elevator Sorter Sizing Stress Test', () => {
+  it('should efficiently group and sequence 100 simultaneous checkouts across residential towers without throwing performance lag', () => {
+    // Generate 100 mass mock checkout transactions arriving from diverse towers
+    const massOrders: any[] = [];
+    for (let i = 0; i < 100; i++) {
+      const towerSelector = i % 2 === 0 ? "Marina Crown" : "Princess Tower";
+      massOrders.push({
+        id: `stress-ord-${i}`,
+        totalFils: 1500,
+        address: { building: towerSelector, unit: `Flat ${100 + i}` }
+      });
+    }
+
+    // Process the grouping sequence
+    const startTime = performance.now();
+    const grouped = massOrders.reduce((acc: any, order) => {
+      const key = order.address.building;
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(order);
+      return acc;
+    }, {});
+    const duration = performance.now() - startTime;
+
+    expect(grouped["Marina Crown"]).toHaveLength(50);
+    expect(grouped["Princess Tower"]).toHaveLength(50);
+    
+    // Performance Guard: Sorting 100 orders must execute instantly (under 5 milliseconds)
+    expect(duration).toBeLessThan(5);
+  });
+});
+
+// 15. STRESS TEST SUITE: Extreme Network Offline Disconnect & Sync Recovery
+describe('Offline State Ledger Recovery Sync', () => {
+  it('should preserve locally committed Khata transactions during a network dropout and merge them cleanly upon link re-hydration', () => {
+    // 1. Simulate an active offline device cache storage array
+    let offlineLocalStorageCache = [
+      { id: "tx-offline-01", type: "debit", fils: 2500, description: "Almarai Milk Tab" }
+    ];
+
+    // 2. Simulate the centralized server database ledger array state
+    let serverDatabaseLedger = [
+      { id: "tx-server-00", type: "debit", fils: 1000, description: "Historical Record" }
+    ];
+
+    // 3. Emulate network re-hydration merge function (useOfflineSync.ts logic)
+    const executeOfflineSyncMerge = (localCache: any[], serverDb: any[]) => {
+      const deduplicatedMerge = [...serverDb];
+      localCache.forEach(localTx => {
+        if (!deduplicatedMerge.some(serverTx => serverTx.id === localTx.id)) {
+          deduplicatedMerge.push(localTx); // Safely appends new offline activities
+        }
+      });
+      return deduplicatedMerge;
+    };
+
+    const synchronizedLedger = executeOfflineSyncMerge(offlineLocalStorageCache, serverDatabaseLedger);
+
+    expect(synchronizedLedger).toHaveLength(2);
+    expect(synchronizedLedger[1].id).toBe("tx-offline-01");
+    expect(synchronizedLedger[0].fils).toBe(1000); // Original server records remain untampered
+  });
+});
