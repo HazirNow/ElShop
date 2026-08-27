@@ -71,6 +71,7 @@ import { ShiftReconciliationModal } from './ShiftReconciliationModal';
 import { ConsolidatedPnLView } from './ConsolidatedPnLView';
 import { StaffManagementView } from './StaffManagementView';
 import { MerchantCameraPromptModal } from './MerchantCameraPromptModal';
+import { CashierQuickGuideModal } from './CashierQuickGuideModal';
 
 interface Props {
   state: AppState;
@@ -161,6 +162,7 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
   const [showOfflineCounterModal, setShowOfflineCounterModal] = useState(false);
   const [showCameraPromptModal, setShowCameraPromptModal] = useState(false);
   const [showShiftReconciliationModal, setShowShiftReconciliationModal] = useState(false);
+  const [showCashierGuideModal, setShowCashierGuideModal] = useState(false);
 
   // Prompt merchant for camera access on initial POS entry if not already decided
   useEffect(() => {
@@ -730,6 +732,7 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
         onOpenOfflineModal={() => setShowOfflineModal(true)}
         onOpenQuickOrderModal={() => setShowOfflineCounterModal(true)}
         onOpenElevatorPosterModal={() => setShowElevatorPosterModal(true)}
+        onOpenCashierGuide={() => setShowCashierGuideModal(true)}
         onOpenUpgradeModal={handleOpenUpgradeModal}
         onOpenShiftReconciliation={() => setShowShiftReconciliationModal(true)}
         soundEnabled={soundEnabled}
@@ -3288,6 +3291,14 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
         isOpen={showCameraPromptModal}
         onClose={() => setShowCameraPromptModal(false)}
         lang={lang}
+      />
+
+      {/* Cashier Operational Quick Guide (Printable 1-Page Cheat Sheet) */}
+      <CashierQuickGuideModal
+        isOpen={showCashierGuideModal}
+        onClose={() => setShowCashierGuideModal(false)}
+        lang={lang}
+        store={store}
       />
 
       {/* Hidden native camera and gallery file inputs */}

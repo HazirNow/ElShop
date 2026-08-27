@@ -20,7 +20,8 @@ import {
   Scale,
   CreditCard,
   Zap,
-  Store as StoreIcon
+  Store as StoreIcon,
+  FileText
 } from 'lucide-react';
 import { Store, Language } from '../types';
 import { useTierAccess } from '../hooks/useTierAccess';
@@ -42,6 +43,7 @@ interface MerchantHeaderProps {
   onOpenOfflineModal: () => void;
   onOpenQuickOrderModal: () => void;
   onOpenElevatorPosterModal: () => void;
+  onOpenCashierGuide?: () => void;
   onOpenUpgradeModal: (featureTitle?: string) => void;
   onOpenShiftReconciliation?: () => void;
   soundEnabled: boolean;
@@ -63,6 +65,7 @@ export const MerchantHeader: React.FC<MerchantHeaderProps> = ({
   onOpenOfflineModal,
   onOpenQuickOrderModal,
   onOpenElevatorPosterModal,
+  onOpenCashierGuide,
   onOpenUpgradeModal,
   onOpenShiftReconciliation,
   soundEnabled,
@@ -266,6 +269,18 @@ export const MerchantHeader: React.FC<MerchantHeaderProps> = ({
             <QrCode className="w-3.5 h-3.5 text-amber-300" />
             <span>{isRtl ? 'ملصق المصعد QR' : 'Elevator QR'}</span>
           </button>
+
+          {/* Operational Quick Guide (Printable Cheat Sheet) */}
+          {onOpenCashierGuide && (
+            <button
+              onClick={onOpenCashierGuide}
+              className="px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 shadow-sm active:scale-95 cursor-pointer"
+              title="View & Print 1-Page Cashier Quick Guide"
+            >
+              <FileText className="w-3.5 h-3.5 text-emerald-400" />
+              <span>{isRtl ? 'دليل الكاشير' : 'Quick Guide'}</span>
+            </button>
+          )}
 
           {/* Quick Low Stock Alert Shortcut Pill */}
           {lowStockCount > 0 && (

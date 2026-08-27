@@ -20,6 +20,7 @@ export interface TierAccess {
   canBatchKhataStatements: boolean; // Tier 2+
   canViewBranchComparison: boolean; // Tier 3
   canMultiBranchBenchmarking: boolean; // Tier 3
+  canViewLossPreventionROI: boolean; // Tier 3 (Loss Prevention & Shrinkage Analytics)
   canManageReorderAlerts: boolean; // Tier 2+
   canAddStaffPINs: boolean; // Tier 2+
 }
@@ -64,6 +65,7 @@ export function getTierAccess(storeOrTier?: Store | number | null): TierAccess {
     canBatchKhataStatements: tierNum >= 2,
     canViewBranchComparison: tierNum >= 3,
     canMultiBranchBenchmarking: tierNum >= 3,
+    canViewLossPreventionROI: tierNum >= 3,
     canManageReorderAlerts: tierNum >= 2,
     canAddStaffPINs: tierNum >= 2,
   };
