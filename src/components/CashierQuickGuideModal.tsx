@@ -3,17 +3,25 @@ import {
   Printer, 
   X, 
   ShieldCheck, 
-  QrCode, 
   Coins, 
-  PackageCheck, 
-  Truck, 
+  Banknote, 
+  CreditCard, 
+  BookOpen, 
   WifiOff, 
-  AlertCircle, 
+  RefreshCw, 
+  AlertTriangle, 
   Clock, 
+  PhoneCall, 
+  CheckCircle2, 
+  KeyRound, 
+  Scale, 
+  Calculator, 
+  Zap, 
+  QrCode, 
+  Layers, 
+  Store as StoreIcon,
   HelpCircle,
-  Sparkles,
-  PhoneCall,
-  CheckCircle2
+  Sparkles
 } from 'lucide-react';
 import { Language, Store } from '../types';
 
@@ -39,57 +47,59 @@ export const CashierQuickGuideModal: React.FC<Props> = ({
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/85 backdrop-blur-sm overflow-y-auto"
       id="cashier-quick-guide-modal"
     >
-      {/* Print CSS Stylesheet for Single-Page High-Density Output */}
+      {/* High-Precision Single-Page A4 Print Stylesheet */}
       <style>{`
         @media print {
           body * {
-            visibility: hidden;
+            visibility: hidden !important;
           }
           #printable-quick-guide, #printable-quick-guide * {
-            visibility: visible;
+            visibility: visible !important;
           }
           #printable-quick-guide {
-            position: absolute;
-            left: 0;
-            top: 0;
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
             width: 100% !important;
             max-width: 100% !important;
             margin: 0 !important;
-            padding: 12px !important;
+            padding: 6mm !important;
             background: white !important;
-            color: black !important;
+            color: #0f172a !important;
             box-shadow: none !important;
             border: none !important;
+            font-size: 9pt !important;
+            line-height: 1.25 !important;
           }
           .no-print {
             display: none !important;
           }
           @page {
             size: A4 portrait;
-            margin: 8mm;
+            margin: 5mm;
           }
         }
       `}</style>
 
       <div 
         id="printable-quick-guide"
-        className="bg-white text-slate-900 w-full max-w-4xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden my-auto print:rounded-none print:border-none print:shadow-none"
+        className="bg-white text-slate-900 w-full max-w-4xl rounded-2xl shadow-2xl border border-slate-300 overflow-hidden my-auto print:rounded-none print:border-none print:shadow-none"
       >
-        {/* Modal Action Bar (Hidden on Print) */}
-        <div className="no-print bg-slate-900 text-white px-5 py-3.5 flex items-center justify-between border-b border-slate-800">
+        {/* Modal Action Bar (Hidden in Print Output) */}
+        <div className="no-print bg-slate-900 text-white px-5 py-3 flex items-center justify-between border-b border-slate-800">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-emerald-500 text-slate-950 flex items-center justify-center font-black">
               📋
             </div>
             <div>
               <h3 className="font-extrabold text-sm text-white">
-                {isRtl ? 'دليل التشغيل السريع للكاشير (A4 Cheat Sheet)' : 'ElShop Operational Quick Guide (Printable A4)'}
+                {isRtl ? 'دليل التشغيل السريع للكاشير (A4 Printable Guide)' : 'ElShop Operational Quick Guide (Printable A4)'}
               </h3>
               <p className="text-[11px] text-slate-400">
-                Print-ready single-sheet guide for cashier desk and counter clipping
+                1-Page counter-clipped cheat sheet with app-matching icons (Arabic & English)
               </p>
             </div>
           </div>
@@ -97,10 +107,10 @@ export const CashierQuickGuideModal: React.FC<Props> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={handlePrint}
-              className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow transition-all active:scale-95"
+              className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow transition-all active:scale-95 cursor-pointer"
             >
               <Printer className="w-4 h-4" />
-              <span>{isRtl ? 'طباعة الدليل (Print PDF)' : 'Print Guide (1-Page A4)'}</span>
+              <span>{isRtl ? 'طباعة الدليل A4 (Print PDF)' : 'Print 1-Page PDF (A4)'}</span>
             </button>
             <button
               onClick={onClose}
@@ -112,167 +122,236 @@ export const CashierQuickGuideModal: React.FC<Props> = ({
         </div>
 
         {/* Printable Document Body */}
-        <div className="p-6 space-y-4 text-xs font-sans">
+        <div className="p-4 sm:p-5 space-y-3 text-slate-900 font-sans print:p-0 print:space-y-2.5">
           
-          {/* Document Header */}
-          <div className="border-b-2 border-slate-900 pb-3 flex items-start justify-between">
+          {/* Header Banner */}
+          <div className="border-b-2 border-slate-900 pb-2.5 flex items-start justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-slate-900 text-white rounded-xl flex items-center justify-center font-black text-xl border-2 border-emerald-500 shrink-0">
+              <div className="w-11 h-11 bg-slate-900 text-white rounded-xl flex items-center justify-center font-black text-lg border-2 border-emerald-500 shrink-0">
                 EL
               </div>
               <div>
-                <h1 className="text-xl font-black text-slate-900 uppercase tracking-tight">
-                  ElShop POS • Operational Quick Guide
-                </h1>
-                <h2 className="text-sm font-bold text-slate-600">
-                  دليل التشغيل السريع لموظفي الصندوق والمحاسبين (10-Store Pilot Standard)
+                <div className="flex items-center gap-2">
+                  <h1 className="text-base sm:text-lg font-black text-slate-900 uppercase tracking-tight">
+                    ElShop POS • Operational Quick Guide
+                  </h1>
+                  <span className="bg-emerald-100 text-emerald-900 border border-emerald-300 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">
+                    10-Store Pilot Standard
+                  </span>
+                </div>
+                <h2 className="text-xs font-bold text-slate-600">
+                  دليل التشغيل السريع لموظفي الصندوق والمحاسبين (مطابقة الوردية، طباعة الفواتير، وحالات الطوارئ)
                 </h2>
               </div>
             </div>
 
-            <div className="text-right text-[11px] font-mono text-slate-600">
-              <p className="font-bold text-slate-900">{store?.name || 'Al Madina Fresh Grocer'}</p>
-              <p>Store ID: <span className="font-bold">{store?.id || 'store-001'}</span></p>
-              <p>Standard SLA: <span className="font-bold text-emerald-700">12 Mins</span></p>
+            <div className="text-right text-[10px] font-mono text-slate-700 leading-tight">
+              <p className="font-bold text-slate-950 text-xs">{store?.name || 'Al Madina Fresh Grocer'}</p>
+              <p>Store ID: <span className="font-bold text-slate-900">{store?.id || 'store-001'}</span></p>
+              <p>Target SLA: <span className="font-bold text-emerald-700">12 Mins Max</span></p>
             </div>
           </div>
 
-          {/* 6 Step Quick Instructions Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 print:grid-cols-2">
+          {/* 3 Main Pillar Columns / Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 print:grid-cols-3">
             
-            {/* Step 1: Shift Opening */}
-            <div className="border-2 border-slate-200 rounded-xl p-3.5 space-y-1.5 bg-slate-50/60 print:bg-white print:border-slate-300">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-lg bg-emerald-600 text-white font-black flex items-center justify-center text-xs shrink-0">
-                  1
+            {/* PILLAR 1: Shift Cash Reconciliation & Drawer Auditing */}
+            <div className="border-2 border-slate-300 rounded-xl p-2.5 bg-slate-50/70 space-y-2 flex flex-col justify-between print:bg-white print:border-slate-400">
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1.5 border-b border-slate-200 pb-1.5">
+                  <div className="p-1 rounded bg-amber-500/20 text-amber-800">
+                    <Scale className="w-4 h-4 text-amber-700" />
+                  </div>
+                  <div>
+                    <h3 className="font-black text-xs text-slate-900">
+                      1. Shift Reconciliation
+                    </h3>
+                    <p className="text-[10px] text-slate-600 font-bold">
+                      مطابقة وإغلاق الصندوق اليومي
+                    </p>
+                  </div>
                 </div>
-                <h4 className="font-black text-xs text-slate-900">
-                  Start Shift & Float Setup / بدء الوردية والصندوق
-                </h4>
+
+                {/* Instruction Steps */}
+                <div className="space-y-1.5 text-[10.5px] text-slate-800">
+                  <div className="flex items-start gap-1.5">
+                    <Coins className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="text-slate-950">Denomination Tally / عد الفئات:</strong> Count physical 100, 50, 20, 10, 5 AED notes and 1 AED/50 fils coins into the POS calculator.
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-1.5">
+                    <Calculator className="w-3.5 h-3.5 text-indigo-600 shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="text-slate-950">Opening Float / العهدة:</strong> Deduct standard float (<strong>200.00 AED</strong>) before comparing shift revenue.
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="text-slate-950">Zero-Variance Target (0.00 AED):</strong> If counted cash exactly matches system total, shift closes instantly.
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-1.5">
+                    <KeyRound className="w-3.5 h-3.5 text-rose-600 shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="text-slate-950">Manager PIN Gate / موافقة المشرف:</strong> Any shortage or surplus requires 4-digit Manager PIN + logged reason in audit trail.
+                    </div>
+                  </div>
+                </div>
               </div>
-              <ul className="text-[11px] text-slate-700 space-y-1 pl-7 list-disc">
-                <li>Count opening register float (default: <strong>200.00 AED</strong> in small notes & coins).</li>
-                <li>Check thermal printer green light & ensure 58mm/80mm paper roll is seated.</li>
-                <li>Enter your <strong>4-digit Cashier PIN</strong> to activate order terminal.</li>
-              </ul>
+
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-1.5 text-[9.5px] text-amber-900 font-medium">
+                ⚡ <strong>Shift Rule:</strong> Never leave register un-audited at shift change. Always hand physical cash to shift manager.
+              </div>
             </div>
 
-            {/* Step 2: Order Acceptance */}
-            <div className="border-2 border-slate-200 rounded-xl p-3.5 space-y-1.5 bg-slate-50/60 print:bg-white print:border-slate-300">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-lg bg-emerald-600 text-white font-black flex items-center justify-center text-xs shrink-0">
-                  2
+            {/* PILLAR 2: Receipt Printing & Payment Methods */}
+            <div className="border-2 border-slate-300 rounded-xl p-2.5 bg-slate-50/70 space-y-2 flex flex-col justify-between print:bg-white print:border-slate-400">
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1.5 border-b border-slate-200 pb-1.5">
+                  <div className="p-1 rounded bg-indigo-500/20 text-indigo-800">
+                    <Printer className="w-4 h-4 text-indigo-700" />
+                  </div>
+                  <div>
+                    <h3 className="font-black text-xs text-slate-900">
+                      2. Receipt Printing & Payments
+                    </h3>
+                    <p className="text-[10px] text-slate-600 font-bold">
+                      طباعة الفواتير وطرق الدفع
+                    </p>
+                  </div>
                 </div>
-                <h4 className="font-black text-xs text-slate-900">
-                  Accept & Pack Order / استلام وتجهيز الطلب
-                </h4>
+
+                {/* Instruction Steps */}
+                <div className="space-y-1.5 text-[10.5px] text-slate-800">
+                  <div className="flex items-start gap-1.5">
+                    <Banknote className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="text-slate-950">CASH (الدفع نقداً):</strong> Hand rider exact change if requested. Reconcile collected notes immediately upon runner return.
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-1.5">
+                    <CreditCard className="w-3.5 h-3.5 text-purple-600 shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="text-slate-950">CARD (بطاقة بنكية):</strong> Verify credit card terminal slip matches exact order fils before dispatching runner.
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-1.5">
+                    <BookOpen className="w-3.5 h-3.5 text-blue-600 shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="text-slate-950">KHATA (دفتر الديون الآجل):</strong> Check tenant credit limit. Have customer or rider sign merchant receipt copy.
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-1.5">
+                    <QrCode className="w-3.5 h-3.5 text-slate-700 shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="text-slate-950">Thermal 58mm/80mm:</strong> Staple printed receipt with live QR to the outer grocery delivery bag.
+                    </div>
+                  </div>
+                </div>
               </div>
-              <ul className="text-[11px] text-slate-700 space-y-1 pl-7 list-disc">
-                <li>When audio chime rings, tap <strong>"Accept (قبول)"</strong> within 60 seconds.</li>
-                <li>Check off each physical grocery item from the digital packing list.</li>
-                <li>Write <strong>Tower Name & Flat #</strong> on paper bag (e.g. <em>Princess Tower #1402</em>).</li>
-              </ul>
+
+              <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-1.5 text-[9.5px] text-indigo-900 font-medium">
+                📄 <strong>Printing Tip:</strong> If paper roll runs out, replace 80mm roll and tap <em>"Reprint Receipt"</em> on order card.
+              </div>
             </div>
 
-            {/* Step 3: Receipt Printing */}
-            <div className="border-2 border-slate-200 rounded-xl p-3.5 space-y-1.5 bg-slate-50/60 print:bg-white print:border-slate-300">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-lg bg-emerald-600 text-white font-black flex items-center justify-center text-xs shrink-0">
-                  3
+            {/* PILLAR 3: Emergency Status & Offline Recovery */}
+            <div className="border-2 border-slate-300 rounded-xl p-2.5 bg-slate-50/70 space-y-2 flex flex-col justify-between print:bg-white print:border-slate-400">
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1.5 border-b border-slate-200 pb-1.5">
+                  <div className="p-1 rounded bg-rose-500/20 text-rose-800">
+                    <WifiOff className="w-4 h-4 text-rose-700" />
+                  </div>
+                  <div>
+                    <h3 className="font-black text-xs text-slate-900">
+                      3. Emergency & Offline Mode
+                    </h3>
+                    <p className="text-[10px] text-slate-600 font-bold">
+                      حالات الطوارئ وانقطاع الإنترنت
+                    </p>
+                  </div>
                 </div>
-                <h4 className="font-black text-xs text-slate-900">
-                  Thermal Receipt Printing / طباعة الفاتورة الحرارية
-                </h4>
-              </div>
-              <ul className="text-[11px] text-slate-700 space-y-1 pl-7 list-disc">
-                <li>Tap <strong>"Print Receipt (طباعة)"</strong> on the order screen.</li>
-                <li>Staple customer receipt (with QR code) to outer bag.</li>
-                <li>Verify payment type badge: <strong>CASH (نقدي)</strong>, <strong>CARD (بطاقة)</strong>, or <strong>KHATA (دفتر آجل)</strong>.</li>
-              </ul>
-            </div>
 
-            {/* Step 4: Rider Doorstep COD */}
-            <div className="border-2 border-slate-200 rounded-xl p-3.5 space-y-1.5 bg-slate-50/60 print:bg-white print:border-slate-300">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-lg bg-emerald-600 text-white font-black flex items-center justify-center text-xs shrink-0">
-                  4
-                </div>
-                <h4 className="font-black text-xs text-slate-900">
-                  Rider Dispatch & Elevator Batching / تسليم السائق
-                </h4>
-              </div>
-              <ul className="text-[11px] text-slate-700 space-y-1 pl-7 list-disc">
-                <li>Combine multiple orders going to the same building for 1 elevator run.</li>
-                <li>Hand exact change float to rider if customer requested large bill change.</li>
-                <li>Collect and reconcile cash instantly upon runner return.</li>
-              </ul>
-            </div>
+                {/* Instruction Steps */}
+                <div className="space-y-1.5 text-[10.5px] text-slate-800">
+                  <div className="flex items-start gap-1.5">
+                    <WifiOff className="w-3.5 h-3.5 text-rose-600 shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="text-slate-950">Offline Auto-Detect:</strong> POS automatically activates local IndexedDB storage if store Wi-Fi disconnects.
+                    </div>
+                  </div>
 
-            {/* Step 5: End Shift Reconciliation */}
-            <div className="border-2 border-slate-200 rounded-xl p-3.5 space-y-1.5 bg-slate-50/60 print:bg-white print:border-slate-300">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-lg bg-emerald-600 text-white font-black flex items-center justify-center text-xs shrink-0">
-                  5
-                </div>
-                <h4 className="font-black text-xs text-slate-900">
-                  End Shift Reconciliation / إغلاق الوردية والمطابقة
-                </h4>
-              </div>
-              <ul className="text-[11px] text-slate-700 space-y-1 pl-7 list-disc">
-                <li>Tap <strong>"End-of-Shift Cash Reconciliation"</strong> in top header.</li>
-                <li>Count 100, 50, 20, 10 AED notes and coins into denomination counter.</li>
-                <li><strong>Zero Variance (0.00 AED)</strong> closes automatically. Discrepancy requires Manager PIN.</li>
-              </ul>
-            </div>
+                  <div className="flex items-start gap-1.5">
+                    <Zap className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="text-slate-950">Quick Offline Order:</strong> Tap the lightning icon to ring up walk-in customers normally with local receipts.
+                    </div>
+                  </div>
 
-            {/* Step 6: Emergency Offline Mode */}
-            <div className="border-2 border-slate-200 rounded-xl p-3.5 space-y-1.5 bg-slate-50/60 print:bg-white print:border-slate-300">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-lg bg-emerald-600 text-white font-black flex items-center justify-center text-xs shrink-0">
-                  6
+                  <div className="flex items-start gap-1.5">
+                    <RefreshCw className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="text-slate-950">Auto-Sync on Reconnect:</strong> All queued transactions upload seamlessly once internet is restored (0 data loss).
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-indigo-600 shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="text-slate-950">Elevator Batching:</strong> In rush hours, combine 2-3 bags for the same residential tower in 1 elevator run.
+                    </div>
+                  </div>
                 </div>
-                <h4 className="font-black text-xs text-slate-900">
-                  Offline Emergency Mode / وضع عدم الاتصال بالإنترنت
-                </h4>
               </div>
-              <ul className="text-[11px] text-slate-700 space-y-1 pl-7 list-disc">
-                <li>If store Wi-Fi drops, system automatically activates offline mode.</li>
-                <li>Tap <strong>"Quick Offline Order"</strong> to register walk-in sales normally.</li>
-                <li>All sales queue locally and sync automatically when internet restores.</li>
-              </ul>
+
+              <div className="bg-rose-50 border border-rose-200 rounded-lg p-1.5 text-[9.5px] text-rose-900 font-medium">
+                🚨 <strong>Emergency Contact:</strong> WhatsApp SOS Hotline: <strong>+971 50 123 4567</strong> • Store Override Code: <strong>*778</strong>
+              </div>
             </div>
 
           </div>
 
-          {/* Quick Denomination Reference & Emergency Footer */}
-          <div className="border-2 border-slate-900 rounded-xl p-3 bg-slate-900 text-white flex flex-col sm:flex-row items-center justify-between gap-3 print:bg-slate-100 print:text-slate-900 print:border-slate-400">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-emerald-500 text-slate-950 rounded-lg font-black text-lg">
-                ⚡
+          {/* Quick Cashier Reference Bar */}
+          <div className="border border-slate-300 rounded-xl p-2 bg-slate-900 text-white flex flex-col sm:flex-row items-center justify-between gap-2 print:bg-slate-100 print:text-slate-900 print:border-slate-400">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 bg-emerald-500 text-slate-950 rounded-lg font-black text-xs shrink-0">
+                POS
               </div>
-              <div>
-                <p className="font-extrabold text-xs">
-                  Emergency Support & Dispatch Helpdesk
+              <div className="text-[10px]">
+                <p className="font-extrabold text-white print:text-slate-900">
+                  Standard Cashier Workflow (سير العمل اليومي)
                 </p>
-                <p className="text-[10px] text-slate-300 print:text-slate-600">
-                  WhatsApp: <strong>+971 50 123 4567</strong> • Store Hotkey: <strong>*778</strong> • Web: <strong>elshop.ae/pos</strong>
+                <p className="text-slate-300 print:text-slate-600">
+                  1. Open Float (200 AED) ➔ 2. Accept Orders &lt;60s ➔ 3. Staple Thermal Receipt ➔ 4. Dispatch Runner ➔ 5. Reconcile Cash
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-3 text-right text-[10px] text-slate-300 print:text-slate-700 font-mono">
+            <div className="flex items-center gap-3 text-right text-[9.5px] text-slate-300 print:text-slate-700 font-mono">
               <div>
-                <p>Manager PIN: <span className="font-bold text-white print:text-slate-900">{store?.pin || '1234'}</span></p>
-                <p>Rider PIN: <span className="font-bold text-white print:text-slate-900">{store?.riderPin || '5678'}</span></p>
+                <span className="text-slate-400 print:text-slate-600">Manager PIN: </span>
+                <strong className="text-white print:text-slate-900 bg-slate-800 print:bg-slate-200 px-1.5 py-0.5 rounded">{store?.pin || '1234'}</strong>
+              </div>
+              <div>
+                <span className="text-slate-400 print:text-slate-600">Runner PIN: </span>
+                <strong className="text-white print:text-slate-900 bg-slate-800 print:bg-slate-200 px-1.5 py-0.5 rounded">{store?.riderPin || '5678'}</strong>
               </div>
             </div>
           </div>
 
-          {/* Verification Barcode / Footer Note */}
-          <div className="text-center text-[10px] text-slate-500 border-t border-slate-200 pt-2 flex items-center justify-between font-mono">
+          {/* Footer Metadata */}
+          <div className="text-center text-[9px] text-slate-500 border-t border-slate-200 pt-1.5 flex items-center justify-between font-mono">
             <span>ElShop Operating System v1.0.0 • Dubai Pilot Edition</span>
-            <span>Document Code: EL-QG-2026-A4</span>
-            <span>All Rights Reserved © 2026</span>
+            <span>Ref: EL-QG-2026-A4 (Cashier Cheat Sheet)</span>
+            <span>Zero-PII UAE PDPL Compliant</span>
           </div>
 
         </div>
