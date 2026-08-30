@@ -308,6 +308,8 @@ export async function createProduct(payload: Partial<Product>): Promise<Product>
     inStock: (payload.stock ?? 20) > 0,
     image: payload.image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=400&q=80',
     expiryDate: payload.expiryDate,
+    barcode: payload.barcode,
+    sku: payload.sku,
   };
   cached.products.unshift(newProduct);
   saveCachedState(cached);

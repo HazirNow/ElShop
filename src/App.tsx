@@ -391,12 +391,12 @@ export default function App() {
               </div>
             </div>
 
-            {/* Right Header Utilities */}
-            <div className="flex items-center gap-2">
+            {/* Right Header Utilities & Brand Logo on Right Corner */}
+            <div className="flex items-center gap-2 sm:gap-3">
               {/* Language LTR / RTL toggle */}
               <button
                 onClick={() => setLang(lang === 'en' ? 'ar' : 'en')}
-                className="bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all"
+                className="bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
                 title="Toggle Language"
               >
                 <Globe className="w-3.5 h-3.5 text-indigo-400" />
@@ -407,12 +407,17 @@ export default function App() {
               <button
                 onClick={handleResetData}
                 disabled={isResetting}
-                className="bg-slate-800 hover:bg-rose-950 text-slate-300 hover:text-white border border-slate-700 hover:border-rose-700 p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 transition-all active:scale-95"
+                className="bg-slate-800 hover:bg-rose-950 text-slate-300 hover:text-white border border-slate-700 hover:border-rose-700 p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 transition-all active:scale-95 cursor-pointer"
                 title={t('resetData')}
               >
                 <RotateCcw className={`w-3.5 h-3.5 ${isResetting ? 'animate-spin' : ''}`} />
                 <span className="hidden md:inline">{t('resetData')}</span>
               </button>
+
+              {/* ElShop Brand Logo placed proudly on the Right Corner */}
+              <div className="pl-1 sm:pl-2.5 border-l border-slate-800 hidden sm:flex items-center shrink-0">
+                <ElShopLogo size="sm" variant="white" showCountry />
+              </div>
             </div>
 
           </div>

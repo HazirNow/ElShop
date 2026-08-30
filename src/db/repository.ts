@@ -1292,6 +1292,8 @@ export async function upsertProductInDb(productData: Partial<Product> & { storeI
         supplierId: productData.supplierId || existing.supplierId,
         supplierPhone: productData.supplierPhone || existing.supplierPhone,
         expiryDate: productData.expiryDate || existing.expiryDate,
+        barcode: productData.barcode !== undefined ? (productData.barcode || undefined) : existing.barcode,
+        sku: productData.sku !== undefined ? (productData.sku || undefined) : existing.sku,
       });
       return existing;
     }
@@ -1315,6 +1317,8 @@ export async function upsertProductInDb(productData: Partial<Product> & { storeI
       supplierId: productData.supplierId || undefined,
       supplierPhone: productData.supplierPhone || undefined,
       expiryDate: productData.expiryDate || undefined,
+      barcode: productData.barcode || undefined,
+      sku: productData.sku || undefined,
     };
     memoryStore.products.push(newProd);
     return newProd;
@@ -1340,6 +1344,8 @@ export async function upsertProductInDb(productData: Partial<Product> & { storeI
     supplierId: productData.supplierId || null,
     supplierPhone: productData.supplierPhone || null,
     expiryDate: productData.expiryDate || null,
+    barcode: productData.barcode || null,
+    sku: productData.sku || null,
   }).onConflictDoUpdate({
     target: products.id,
     set: {
@@ -1359,6 +1365,8 @@ export async function upsertProductInDb(productData: Partial<Product> & { storeI
       supplierId: productData.supplierId || null,
       supplierPhone: productData.supplierPhone || null,
       expiryDate: productData.expiryDate || null,
+      barcode: productData.barcode || null,
+      sku: productData.sku || null,
     },
   }).returning();
 

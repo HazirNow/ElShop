@@ -41,7 +41,9 @@ export type ProductCategory =
   | 'Beverages'
   | 'Pantry'
   | 'Snacks'
-  | 'Fresh Produce';
+  | 'Fresh Produce'
+  | 'Household'
+  | 'Personal Care';
 
 export interface Product {
   id: string;
@@ -63,6 +65,8 @@ export interface Product {
   lowStockThreshold?: number; // Threshold in units before product goes red (defaults to 5)
   inStock: boolean;
   image: string;
+  barcode?: string;
+  sku?: string;
   supplierId?: string;
   supplierPhone?: string;
   expiryDate?: string; // e.g. YYYY-MM-DD for expiry tracking

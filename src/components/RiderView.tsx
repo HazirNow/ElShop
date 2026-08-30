@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Bike,
@@ -24,13 +24,40 @@ import {
   Share2,
   Sparkles,
   Layers,
-  Timer
+  Timer,
+  ChevronsDownUp,
+  ChevronsUpDown
 } from 'lucide-react';
 import { AppState, Order, Rider, Language } from '../types';
 import { updateOrder, getBatchedRiderTasks, BatchedBuildingRun } from '../api';
 import { getTranslation } from '../translations';
 import { ProductImage } from './ProductImage';
 import { generateRiderToCustomerWhatsAppLink, generateDeliveredReceiptWhatsAppLink } from '../lib/whatsapp';
+import { RiderBuildingRunCard, BuildingGroup, FloorGroup } from './RiderBuildingRunCard';
+
+// Helper to extract floor number from UAE unit strings (e.g. "Unit 402" -> 4, "Apt 1205" -> 12, "Floor 5" -> 5)
+const extractFloorNumber = (unitStr: string): number => {
+  if (!unitStr) return 0;
+  const trimmed = unitStr.trim();
+  const floorMatch = trimmed.match(/(?:floor|fl|level|lvl|f)\s*[:#-]?\s*(\d+)/i);
+  if (floorMatch) return parseInt(floorMatch[1], 10);
+
+  const numMatch = trimmed.match(/\d+/);
+  if (!numMatch) return 0;
+  const num = parseInt(numMatch[0], 10);
+  if (num >= 100 && num <= 9999) {
+    return Math.floor(num / 100);
+  }
+  return num;
+};
+
+const getFloorLabels = (floorNum: number) => {
+  if (floorNum === 0) return { en: 'Ground Floor', ar: 'الطابق الأرضي' };
+  if (floorNum === 1) return { en: '1st Floor', ar: 'الطابق الأول' };
+  if (floorNum === 2) return { en: '2nd Floor', ar: 'الطابق الثاني' };
+  if (floorNum === 3) return { en: '3rd Floor', ar: 'الطابق الثالث' };
+  return { en: `Floor ${floorNum}`, ar: `الطابق ${floorNum}` };
+};
 
 interface Props {
   state: AppState;
@@ -79,17 +106,6 @@ export const RiderView: React.FC<Props> = ({ state, activeStoreId, lang, onRefre
     riderTasks = riderTasks.filter((o) => o.building === selectedBuildingFilter);
   }
 
-  // Floor sequence sorter
-  if (sortByFloorAsc) {
-    riderTasks = [...riderTasks].sort((a, b) => {
-      const getFloor = (unitStr: string) => {
-        const match = unitStr.match(/\d+/);
-        return match ? parseInt(match[0], 10) : 0;
-      };
-      return getFloor(a.unit) - getFloor(b.unit);
-    });
-  }
-
   const uniqueBuildings = Array.from(new Set(state.orders.filter(o => o.riderId === currentRider?.id && o.status === 'out_for_delivery').map(o => o.building)));
 
   const completedRiderTasks = state.orders.filter(
@@ -99,6 +115,89 @@ export const RiderView: React.FC<Props> = ({ state, activeStoreId, lang, onRefre
   const totalCashToCollect = riderTasks
     .filter((o) => o.paymentMethod === 'cash')
     .reduce((sum, o) => sum + o.total, 0);
+
+  // Collapsed state map for buildings
+  const [collapsedBuildings, setCollapsedBuildings] = useState<Record<string, boolean>>({});
+
+  const toggleBuildingCollapse = (buildingName: string) => {
+    setCollapsedBuildings((prev) => ({
+      ...prev,
+      [buildingName]: !prev[buildingName],
+    }));
+  };
+
+  // Group pending orders by Building > Floor
+  const buildingGroups: BuildingGroup[] = useMemo(() => {
+    const map = new Map<string, Order[]>();
+
+    riderTasks.forEach((o) => {
+      const bldg = o.building || 'General Delivery';
+      if (!map.has(bldg)) {
+        map.set(bldg, []);
+      }
+      map.get(bldg)!.push(o);
+    });
+
+    const groups: BuildingGroup[] = [];
+
+    map.forEach((orders, buildingName) => {
+      const totalCash = orders
+        .filter((o) => o.paymentMethod === 'cash')
+        .reduce((sum, o) => sum + o.total, 0);
+
+      const floorMap = new Map<number, Order[]>();
+      orders.forEach((o) => {
+        const fNum = extractFloorNumber(o.unit);
+        if (!floorMap.has(fNum)) {
+          floorMap.set(fNum, []);
+        }
+        floorMap.get(fNum)!.push(o);
+      });
+
+      // Sort floors based on elevator direction (Low -> High or High -> Low)
+      const sortedFloorEntries = Array.from(floorMap.entries()).sort((a, b) => {
+        return sortByFloorAsc ? a[0] - b[0] : b[0] - a[0];
+      });
+
+      const floors: FloorGroup[] = sortedFloorEntries.map(([floorNumber, fOrders]) => {
+        const labels = getFloorLabels(floorNumber);
+        const sortedOrders = [...fOrders].sort((a, b) =>
+          a.unit.localeCompare(b.unit, undefined, { numeric: true })
+        );
+        return {
+          floorNumber,
+          floorLabel: labels.en,
+          floorLabelAr: labels.ar,
+          orders: sortedOrders,
+        };
+      });
+
+      groups.push({
+        buildingName,
+        totalStops: orders.length,
+        totalCash,
+        floors,
+        allOrders: orders,
+      });
+    });
+
+    // Prioritize buildings with multi-drop batches
+    return groups.sort((a, b) => b.totalStops - a.totalStops);
+  }, [riderTasks, sortByFloorAsc]);
+
+  const allCollapsed = buildingGroups.length > 0 && buildingGroups.every((g) => collapsedBuildings[g.buildingName]);
+
+  const toggleAllBuildingsCollapse = () => {
+    if (allCollapsed) {
+      setCollapsedBuildings({});
+    } else {
+      const all: Record<string, boolean> = {};
+      buildingGroups.forEach((g) => {
+        all[g.buildingName] = true;
+      });
+      setCollapsedBuildings(all);
+    }
+  };
 
   // Selected order for delivery detail modal
   const [activeTaskModal, setActiveTaskModal] = useState<Order | null>(null);
@@ -293,109 +392,81 @@ export const RiderView: React.FC<Props> = ({ state, activeStoreId, lang, onRefre
         <div className={`flex-1 overflow-y-auto p-3 space-y-3 transition-colors ${
           isSunlightMode ? 'bg-slate-100' : 'bg-slate-950'
         }`}>
-          <div className="flex items-center justify-between px-1">
-            <h4 className={`text-xs font-extrabold uppercase tracking-wider ${
-              isSunlightMode ? 'text-slate-700' : 'text-slate-400'
-            }`}>
-              Dispatch Queue ({riderTasks.length})
-            </h4>
-            {selectedBuildingFilter !== 'all' && (
-              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md flex items-center gap-1">
-                <Timer className="w-3 h-3" />
-                ~{riderTasks.length * 3}m Elevator Run
-              </span>
-            )}
-            {selectedBuildingFilter === 'all' && sortByFloorAsc && (
-              <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-md">
-                Elevator Run Optimized
-              </span>
+          {/* Dispatch Queue Header & Collapse Controls */}
+          <div className="flex items-center justify-between px-1 gap-2">
+            <div className="flex items-center gap-2">
+              <h4 className={`text-xs font-extrabold uppercase tracking-wider ${
+                isSunlightMode ? 'text-slate-700' : 'text-slate-400'
+              }`}>
+                {isRtl ? 'قائمة التوصيل' : 'Dispatch Queue'} ({riderTasks.length})
+              </h4>
+              {buildingGroups.length > 0 && (
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                  isSunlightMode ? 'bg-slate-200 text-slate-800' : 'bg-slate-800 text-slate-300'
+                }`}>
+                  {buildingGroups.length} {buildingGroups.length === 1 ? (isRtl ? 'مبنى' : 'Building') : (isRtl ? 'مباني' : 'Buildings')}
+                </span>
+              )}
+            </div>
+
+            {/* Quick Expand / Collapse All & Route Badges */}
+            {buildingGroups.length > 0 && (
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={toggleAllBuildingsCollapse}
+                  className={`px-2 py-1 rounded-lg text-[10px] font-extrabold border flex items-center gap-1 transition-all cursor-pointer ${
+                    isSunlightMode
+                      ? 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300'
+                      : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-700'
+                  }`}
+                  title={allCollapsed ? 'Expand all buildings' : 'Collapse all buildings'}
+                >
+                  {allCollapsed ? (
+                    <>
+                      <ChevronsUpDown className="w-3 h-3 text-emerald-500" />
+                      <span>{isRtl ? 'توسيع الكل' : 'Expand All'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <ChevronsDownUp className="w-3 h-3 text-amber-500" />
+                      <span>{isRtl ? 'طي الكل' : 'Collapse All'}</span>
+                    </>
+                  )}
+                </button>
+              </div>
             )}
           </div>
 
-          {riderTasks.map((task) => (
-            <div
-              key={task.id}
-              onClick={() => {
+          {/* Grouped Building Cards */}
+          {buildingGroups.map((group) => (
+            <RiderBuildingRunCard
+              key={group.buildingName}
+              group={group}
+              isCollapsed={!!collapsedBuildings[group.buildingName]}
+              onToggleCollapse={() => toggleBuildingCollapse(group.buildingName)}
+              onSelectTask={(task) => {
                 setActiveTaskModal(task);
                 setSliderPosition(0);
                 setTenderedAmount(null);
               }}
-              className={`rounded-2xl p-4 border-2 transition-all cursor-pointer shadow-lg group ${
-                isSunlightMode 
-                  ? 'bg-white border-slate-300 hover:border-emerald-600 shadow-slate-200' 
-                  : 'bg-slate-900 border-slate-800 hover:border-emerald-500'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <span className={`text-xs font-extrabold ${isSunlightMode ? 'text-emerald-800' : 'text-emerald-400'}`}>
-                  #{task.id}
-                </span>
-                
-                {/* PAYMENT TYPE BADGE */}
-                {task.paymentMethod === 'cash' && (
-                  <span className="text-[10px] font-extrabold bg-amber-500/20 text-amber-800 border border-amber-500/40 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                    <Banknote className="w-3 h-3" />
-                    <span>{t('collectCash')}: {task.total.toFixed(2)} AED</span>
-                  </span>
-                )}
-                {task.paymentMethod === 'card' && (
-                  <span className="text-[10px] font-extrabold bg-sky-500/20 text-sky-800 border border-sky-500/40 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                    <CreditCard className="w-3 h-3" />
-                    <span>{t('cardPaid')}</span>
-                  </span>
-                )}
-                {task.paymentMethod === 'khata' && (
-                  <span className="text-[10px] font-extrabold bg-emerald-500/20 text-emerald-800 border border-emerald-500/40 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                    <BookOpen className="w-3 h-3" />
-                    <span>{t('khataBooked')}</span>
-                  </span>
-                )}
-              </div>
-
-              {/* OVERSIZED BUILDING & UNIT ADDRESS */}
-              <div className={`p-3 rounded-xl border mb-2 ${
-                isSunlightMode ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
-              }`}>
-                <div className={`text-sm font-black flex items-center gap-2 ${
-                  isSunlightMode ? 'text-slate-900' : 'text-white'
-                }`}>
-                  <Building2 className="w-5 h-5 text-emerald-600 shrink-0" />
-                  <span>{task.building}</span>
-                </div>
-                <div className={`text-base font-extrabold ml-7 mt-0.5 ${
-                  isSunlightMode ? 'text-amber-700' : 'text-amber-400'
-                }`}>
-                  Unit / {task.unit}
-                </div>
-              </div>
-
-              {/* Customer Instruction Notes Preview (if any) */}
-              {task.note && (
-                <div className="mb-2 bg-amber-50 border border-amber-200 text-amber-900 px-2.5 py-1 rounded-lg text-[10px] font-semibold flex items-center gap-1.5">
-                  <BellRing className="w-3 h-3 text-amber-700 shrink-0" />
-                  <span className="truncate">{task.note}</span>
-                </div>
-              )}
-
-              <div className="flex items-center justify-between text-xs text-slate-500">
-                <span className={`font-semibold ${isSunlightMode ? 'text-slate-700' : 'text-slate-300'}`}>
-                  {task.customerName}
-                </span>
-                <span className="font-bold text-emerald-600 group-hover:translate-x-1 transition-transform flex items-center gap-1">
-                  Deliver <ChevronRight className="w-4 h-4" />
-                </span>
-              </div>
-            </div>
+              isSunlightMode={isSunlightMode}
+              isRtl={isRtl}
+              lang={lang}
+              currentRiderName={currentRider?.name || 'Runner'}
+            />
           ))}
 
           {riderTasks.length === 0 && (
             <div className="text-center py-12 text-slate-500 space-y-2">
               <CheckCircle2 className="w-12 h-12 text-emerald-500/40 mx-auto" />
               <h5 className={`font-bold text-xs ${isSunlightMode ? 'text-slate-700' : 'text-slate-400'}`}>
-                All deliveries completed!
+                {isRtl ? 'تم تسليم جميع الطلبات!' : 'All deliveries completed!'}
               </h5>
               <p className="text-[11px] text-slate-500 max-w-[200px] mx-auto">
-                No active delivery tasks assigned to {currentRider?.name}.
+                {isRtl
+                  ? `لا توجد مهام توصيل معلقة لـ ${currentRider?.name}.`
+                  : `No active delivery tasks assigned to ${currentRider?.name}.`}
               </p>
             </div>
           )}
@@ -488,25 +559,28 @@ export const RiderView: React.FC<Props> = ({ state, activeStoreId, lang, onRefre
               </div>
 
               {/* COD Quick-Change Calculator (when cash collection is required) */}
-              <div className={`p-3 rounded-2xl border mb-3 space-y-2 ${
+              <div className={`p-3 rounded-2xl border mb-3 space-y-2.5 ${
                 isSunlightMode ? 'bg-amber-50/90 border-amber-200' : 'bg-slate-950 border-slate-800'
               }`}>
                 <div className="flex items-center justify-between text-[11px] font-bold">
                   <span className="flex items-center gap-1.5 text-amber-800">
                     <Calculator className="w-3.5 h-3.5 text-amber-600" />
-                    <span>Cash Change Calculator:</span>
+                    <span>{isRtl ? 'حاسبة الفكة والصرف النقدي:' : 'Cash Change Calculator:'}</span>
                   </span>
-                  <span className="text-slate-500">Order: {activeTaskModal.total.toFixed(2)} AED</span>
+                  <span className="text-slate-400 font-mono">
+                    Order: <span className="font-bold text-amber-400">{activeTaskModal.total.toFixed(2)} AED</span>
+                  </span>
                 </div>
 
                 {/* Tendered Bill Options */}
                 <div className="grid grid-cols-4 gap-1.5">
                   {[
-                    { val: activeTaskModal.total, label: 'Exact' },
-                    { val: 50, label: '50 AED' },
-                    { val: 100, label: '100 AED' },
-                    { val: 200, label: '200 AED' },
-                  ].map((bill) => (
+                    { val: activeTaskModal.total, label: isRtl ? 'المبلغ بالضبط' : 'Exact' },
+                    ...(activeTaskModal.total <= 50 ? [{ val: 50, label: '50 AED' }] : []),
+                    ...(activeTaskModal.total <= 100 ? [{ val: 100, label: '100 AED' }] : []),
+                    ...(activeTaskModal.total <= 200 ? [{ val: 200, label: '200 AED' }] : []),
+                    { val: 500, label: '500 AED' },
+                  ].slice(0, 4).map((bill) => (
                     <button
                       key={bill.label}
                       type="button"
@@ -524,14 +598,46 @@ export const RiderView: React.FC<Props> = ({ state, activeStoreId, lang, onRefre
                   ))}
                 </div>
 
+                {/* Custom Cash Input Field */}
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-slate-400 font-bold uppercase shrink-0">
+                    {isRtl ? 'مبلغ مخصص:' : 'Custom:'}
+                  </span>
+                  <input
+                    type="number"
+                    step="0.50"
+                    min="0"
+                    placeholder="Enter cash given..."
+                    value={tenderedAmount !== null ? tenderedAmount : ''}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value);
+                      setTenderedAmount(!isNaN(val) ? val : null);
+                    }}
+                    className={`w-full px-2.5 py-1 rounded-lg text-xs font-mono font-bold border focus:outline-none focus:ring-1 focus:ring-amber-400 ${
+                      isSunlightMode 
+                        ? 'bg-white text-slate-900 border-slate-300' 
+                        : 'bg-slate-900 text-white border-slate-700'
+                    }`}
+                  />
+                </div>
+
                 {/* Calculated Change Output */}
                 {tenderedAmount !== null && (
-                  <div className="bg-white p-2 rounded-xl border border-amber-300 flex items-center justify-between text-xs">
-                    <span className="text-slate-600 font-semibold">Return Change to Customer:</span>
-                    <span className="font-black text-amber-800 text-sm">
-                      {Math.max(0, tenderedAmount - activeTaskModal.total).toFixed(2)} AED
-                    </span>
-                  </div>
+                  tenderedAmount >= activeTaskModal.total ? (
+                    <div className="bg-emerald-950/80 border border-emerald-500/50 p-2.5 rounded-xl flex items-center justify-between text-xs text-emerald-300">
+                      <span className="font-semibold">{isRtl ? 'المبلغ المتبقي للعميل (الفكة):' : 'Return Change to Customer:'}</span>
+                      <span className="font-black text-emerald-400 text-base font-mono">
+                        {(tenderedAmount - activeTaskModal.total).toFixed(2)} AED
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="bg-rose-950/80 border border-rose-500/50 p-2.5 rounded-xl flex items-center justify-between text-xs text-rose-300">
+                      <span className="font-semibold">{isRtl ? 'المبلغ المستلم غير كافٍ:' : 'Underpaid (Short):'}</span>
+                      <span className="font-black text-rose-400 text-base font-mono">
+                        -{(activeTaskModal.total - tenderedAmount).toFixed(2)} AED
+                      </span>
+                    </div>
+                  )
                 )}
               </div>
 

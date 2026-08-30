@@ -7,6 +7,8 @@ export const categoryTranslations: Record<ProductCategory, { en: string; ar: str
   'Pantry': { en: 'Pantry', ar: 'المؤن والزيوت' },
   'Snacks': { en: 'Snacks', ar: 'المأكولات الخفيفة' },
   'Fresh Produce': { en: 'Fresh Produce', ar: 'خضار وفواكه طازجة' },
+  'Household': { en: 'Household', ar: 'المنظفات والمنزل' },
+  'Personal Care': { en: 'Personal Care', ar: 'العناية الشخصية' },
 };
 
 export function getCategoryName(category: string, lang: Language): string {

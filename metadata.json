@@ -1,7 +1,9 @@
 {
   "name": "ElShop",
   "description": "Full-stack UAE neighborhood grocery delivery platform with WhatsApp-style chat and multi-role views.",
-  "requestFramePermissions": [],
+  "requestFramePermissions": [
+    "camera"
+  ],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
   ]

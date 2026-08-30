@@ -124,7 +124,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       <header className="sticky top-0 z-40 bg-slate-950/80 backdrop-blur-xl border-b border-slate-800/80 px-4 sm:px-8 py-3.5">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
           
-          {/* Left: Logo */}
+          {/* Start / Left: Brand Logo */}
           <div className="flex items-center gap-3">
             <ElShopLogo size="md" variant="white" showCountry />
             <div className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[11px] font-extrabold tracking-wide">
@@ -134,7 +134,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
 
           {/* Center: Standard Navigation Links */}
-          <nav className="hidden md:flex items-center gap-8 text-xs font-bold text-slate-300">
+          <nav className="hidden lg:flex items-center gap-7 text-xs font-bold text-slate-300">
             <a href="#features" className="hover:text-white transition-colors">
               {isRtl ? 'الميزات' : 'Features'}
             </a>
@@ -152,13 +152,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </a>
           </nav>
 
-          {/* Right: Language, Ghost Log In button & Start Free Trial CTA */}
-          <div className="flex items-center gap-3">
-            
+          {/* End / Right: Actions, Language & CTAs */}
+          <div className="flex items-center gap-2.5 sm:gap-3">
             {/* Language Switch */}
             <button
               onClick={onToggleLang}
-              className="bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all"
+              className="bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
               title="Toggle Language"
             >
               <Globe className="w-3.5 h-3.5 text-indigo-400" />
@@ -169,7 +168,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <button
               onClick={() => handleOpenLogin('merchant')}
               id="landing-header-login-btn"
-              className="text-slate-300 hover:text-white hover:bg-slate-900 px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border border-transparent hover:border-slate-800"
+              className="text-slate-300 hover:text-white hover:bg-slate-900 px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border border-slate-800 cursor-pointer"
             >
               <Lock className="w-3.5 h-3.5 text-amber-400" />
               <span>{isRtl ? 'تسجيل الدخول' : 'Log In'}</span>
@@ -179,12 +178,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <button
               onClick={onOpenMerchantOnboarding}
               id="landing-header-trial-btn"
-              className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold px-4 py-2 rounded-xl text-xs shadow-lg shadow-emerald-950/50 flex items-center gap-1.5 transition-all active:scale-95"
+              className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold px-3.5 sm:px-4 py-2 rounded-xl text-xs shadow-lg shadow-emerald-950/50 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-300" />
               <span>{isRtl ? 'ابدأ تجربتك المجانية' : 'Start Free Trial'}</span>
             </button>
-
           </div>
 
         </div>

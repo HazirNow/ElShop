@@ -588,6 +588,7 @@ function MerchantSimulation({ isArabic }: { isArabic: boolean }) {
     { label: '50 AED', fils: 5000, type: 'note', color: 'from-purple-600 to-indigo-700' },
     { label: '20 AED', fils: 2000, type: 'note', color: 'from-blue-600 to-cyan-700' },
     { label: '10 AED', fils: 1000, type: 'note', color: 'from-emerald-600 to-teal-700' },
+    { label: '5 AED', fils: 500, type: 'note', color: 'from-amber-600 to-amber-700' },
     { label: '1 AED', fils: 100, type: 'coin', color: 'from-amber-400 to-amber-500' },
     { label: '50F', fils: 50, type: 'coin', color: 'from-slate-300 to-slate-400' },
     { label: '25F', fils: 25, type: 'coin', color: 'from-slate-400 to-slate-500' }

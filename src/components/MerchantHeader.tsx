@@ -21,7 +21,8 @@ import {
   CreditCard,
   Zap,
   Store as StoreIcon,
-  FileText
+  FileText,
+  Scan
 } from 'lucide-react';
 import { Store, Language } from '../types';
 import { useTierAccess } from '../hooks/useTierAccess';
@@ -42,6 +43,7 @@ interface MerchantHeaderProps {
   pendingSyncCount: number;
   onOpenOfflineModal: () => void;
   onOpenQuickOrderModal: () => void;
+  onOpenBarcodeScanner?: () => void;
   onOpenElevatorPosterModal: () => void;
   onOpenCashierGuide?: () => void;
   onOpenUpgradeModal: (featureTitle?: string) => void;
@@ -64,6 +66,7 @@ export const MerchantHeader: React.FC<MerchantHeaderProps> = ({
   pendingSyncCount,
   onOpenOfflineModal,
   onOpenQuickOrderModal,
+  onOpenBarcodeScanner,
   onOpenElevatorPosterModal,
   onOpenCashierGuide,
   onOpenUpgradeModal,
@@ -173,7 +176,7 @@ export const MerchantHeader: React.FC<MerchantHeaderProps> = ({
           </div>
         </div>
 
-        {/* Action Controls: Quick Order, Shift Reconcile, Credit Limits, Offline, Elevator QR, Audio */}
+        {/* Action Controls: Quick Order, Barcode Scan, Shift Reconcile, Credit Limits, Offline, Elevator QR, Audio */}
         <div className="flex flex-wrap items-center gap-2">
           {/* Quick Counter / Phone Order Button */}
           <button
@@ -184,6 +187,18 @@ export const MerchantHeader: React.FC<MerchantHeaderProps> = ({
             <Plus className="w-3.5 h-3.5 text-amber-300" />
             <span>{isRtl ? '+ طلب كاونتر فوري' : '+ Quick Order'}</span>
           </button>
+
+          {/* Quick Barcode/QR Scanner POS Button */}
+          {onOpenBarcodeScanner && (
+            <button
+              onClick={onOpenBarcodeScanner}
+              className="px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-950/60 active:scale-95 cursor-pointer"
+              title="Open Live Camera Barcode & QR Scanner POS Terminal"
+            >
+              <Scan className="w-3.5 h-3.5 text-emerald-200 animate-pulse" />
+              <span>{isRtl ? 'ماسح الباركود' : 'Scan Barcode'}</span>
+            </button>
+          )}
 
           {/* End Shift / Drawer Reconciliation Quick Gated Tool Button */}
           <button

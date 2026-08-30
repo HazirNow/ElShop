@@ -163,32 +163,50 @@ export const CustomerView: React.FC<Props> = ({
     'Pantry',
     'Snacks',
     'Fresh Produce',
+    'Household',
+    'Personal Care',
   ];
 
   const filteredProducts = storeProducts.filter((p) => {
     let matchesCategory = false;
-    if (selectedCategory === 'All' || selectedCategory === 'الكل') {
+    const normCategory = selectedCategory.trim().toLowerCase();
+    if (normCategory === 'all' || selectedCategory === 'الكل') {
       matchesCategory = true;
     } else if (
       selectedCategory === '🔥 Special Offers' ||
       selectedCategory === '🔥 العروض الخاصّة' ||
-      selectedCategory === 'On Sale'
+      normCategory === 'on sale'
     ) {
       matchesCategory = Boolean(p.sale ?? p.isOnSale);
     } else {
-      matchesCategory = p.category === selectedCategory;
+      matchesCategory = p.category.toLowerCase() === selectedCategory.toLowerCase();
     }
 
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return matchesCategory;
+
     const matchesSearch =
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.nameAr.includes(searchQuery);
+      p.name.toLowerCase().includes(q) ||
+      (p.nameAr || '').toLowerCase().includes(q) ||
+      (p.barcode && p.barcode.toLowerCase().includes(q)) ||
+      (p.sku && p.sku.toLowerCase().includes(q)) ||
+      (p.category && p.category.toLowerCase().includes(q));
 
     return matchesCategory && matchesSearch;
   });
 
   const updateCartQty = (productId: string, delta: number) => {
+    const prod = storeProducts.find((p) => p.id === productId);
     setCart((prev) => {
       const current = prev[productId] || 0;
+      if (delta > 0 && prod) {
+        if (prod.inStock === false || (prod.stock !== undefined && prod.stock <= 0)) {
+          return prev;
+        }
+        if (prod.stock !== undefined && current >= prod.stock) {
+          return prev;
+        }
+      }
       const next = Math.max(0, current + delta);
       if (next === 0) {
         const copy = { ...prev };
@@ -821,11 +839,15 @@ export const CustomerView: React.FC<Props> = ({
                   const regP = p.regularPrice ?? p.originalPrice;
                   const discP = p.discountedPrice ?? p.price;
                   const effectiveP = isSale && discP !== undefined ? discP : (regP ?? p.price);
+                  const isOutOfStock = p.inStock === false || (p.stock !== undefined && p.stock <= 0);
+                  const isMaxStockReached = p.stock !== undefined && qty >= p.stock;
 
                   return (
                     <div
                       key={p.id}
-                      className="bg-white rounded-2xl p-2.5 border border-slate-200/80 shadow-sm flex flex-col justify-between hover:border-emerald-300 transition-all"
+                      className={`bg-white rounded-2xl p-2.5 border shadow-sm flex flex-col justify-between transition-all ${
+                        isOutOfStock ? 'border-slate-200 opacity-75' : 'border-slate-200/80 hover:border-emerald-300'
+                      }`}
                     >
                       <div>
                         <div className="relative mb-2">
@@ -833,16 +855,20 @@ export const CustomerView: React.FC<Props> = ({
                             src={p.image}
                             alt={isRtl ? p.nameAr : p.name}
                             fallbackType="grocery"
-                            className="w-full h-24 object-cover rounded-xl"
+                            className={`w-full h-24 object-cover rounded-xl ${isOutOfStock ? 'grayscale-[50%]' : ''}`}
                           />
                           <span className={`absolute top-1 ${isRtl ? 'left-1' : 'right-1'} bg-slate-900/80 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-md`}>
                             {isRtl ? (p.unitAr || p.unit) : p.unit}
                           </span>
-                          {isSale && (
+                          {isOutOfStock ? (
+                            <span className={`absolute top-1 ${isRtl ? 'right-1' : 'left-1'} bg-slate-800 text-slate-200 text-[9px] font-black px-1.5 py-0.5 rounded-md uppercase tracking-wider shadow-sm`}>
+                              {isRtl ? 'غير متوفر' : 'Out of Stock'}
+                            </span>
+                          ) : isSale ? (
                             <span className={`absolute top-1 ${isRtl ? 'right-1' : 'left-1'} bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-md uppercase tracking-wider shadow-sm animate-pulse`}>
                               {isRtl ? 'عرض خاص' : 'SALE'}
                             </span>
-                          )}
+                          ) : null}
                         </div>
                         <h4 className="font-semibold text-xs text-slate-800 line-clamp-2 leading-tight">
                           {isRtl ? p.nameAr : p.name}
@@ -860,10 +886,14 @@ export const CustomerView: React.FC<Props> = ({
                       </div>
 
                       <div className="mt-2 pt-2 border-t border-slate-100">
-                        {qty === 0 ? (
+                        {isOutOfStock ? (
+                          <div className="w-full bg-slate-100 text-slate-400 font-bold py-1.5 rounded-xl text-[11px] text-center">
+                            {isRtl ? 'غير متوفر حالياً' : 'Out of Stock'}
+                          </div>
+                        ) : qty === 0 ? (
                           <button
                             onClick={() => updateCartQty(p.id, 1)}
-                            className="w-full bg-emerald-50 hover:bg-[#0B6E4F] text-[#0B6E4F] hover:text-white font-semibold py-1.5 rounded-xl text-xs flex items-center justify-center gap-1 transition-all border border-emerald-200"
+                            className="w-full bg-emerald-50 hover:bg-[#0B6E4F] text-[#0B6E4F] hover:text-white font-semibold py-1.5 rounded-xl text-xs flex items-center justify-center gap-1 transition-all border border-emerald-200 active:scale-95"
                           >
                             <Plus className="w-3.5 h-3.5" />
                             <span>{t('addToCart')}</span>
@@ -879,7 +909,11 @@ export const CustomerView: React.FC<Props> = ({
                             <span className="font-bold text-xs">{qty}</span>
                             <button
                               onClick={() => updateCartQty(p.id, 1)}
-                              className="w-6 h-6 flex items-center justify-center hover:bg-emerald-800 rounded-lg text-white font-bold"
+                              disabled={isMaxStockReached}
+                              className={`w-6 h-6 flex items-center justify-center rounded-lg text-white font-bold ${
+                                isMaxStockReached ? 'opacity-40 cursor-not-allowed' : 'hover:bg-emerald-800'
+                              }`}
+                              title={isMaxStockReached ? (isRtl ? 'الحد الأقصى للكمية المتوفرة' : 'Max stock reached') : undefined}
                             >
                               <Plus className="w-3.5 h-3.5" />
                             </button>
@@ -921,7 +955,7 @@ export const CustomerView: React.FC<Props> = ({
                       <button
                         onClick={() => {
                           setSearchQuery('');
-                          setSelectedCategory('all');
+                          setSelectedCategory('All');
                         }}
                         className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 px-3 rounded-xl text-xs transition-colors"
                       >

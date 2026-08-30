@@ -28,16 +28,10 @@ export function formatWhatsAppNumber(phone: string): string {
 }
 
 /**
- * Formats WhatsApp link using native whatsapp:// protocol on mobile devices or wa.me on web
+ * Formats WhatsApp link using official wa.me universal URL for seamless cross-platform mobile & desktop execution
  */
 export function formatWhatsAppDeepLink(phoneClean: string, text?: string): string {
   const encodedText = text ? encodeURIComponent(text) : '';
-  if (isMobileUser()) {
-    if (encodedText) {
-      return `whatsapp://send?phone=${phoneClean}&text=${encodedText}`;
-    }
-    return `whatsapp://send?phone=${phoneClean}`;
-  }
   if (encodedText) {
     return `https://wa.me/${phoneClean}?text=${encodedText}`;
   }

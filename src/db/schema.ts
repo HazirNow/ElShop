@@ -51,6 +51,8 @@ export const products = pgTable('products', {
   supplierId: text('supplier_id'),
   supplierPhone: text('supplier_phone'),
   expiryDate: text('expiry_date'),
+  barcode: text('barcode'),
+  sku: text('sku'),
 });
 
 // Customers table

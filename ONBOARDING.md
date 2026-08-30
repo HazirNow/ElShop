@@ -24,17 +24,23 @@ This guide is designed for store owners, shift managers, cashiers, and delivery 
 
 ### Step 2: Catalog & Shelf Stock Management
 1. Tap the **Inventory & Stock** tab on the navigation bar.
-2. **Adding New Products & Taking Packaging Photos**:
-   - Tap **+ Add New Product**.
-   - Tap **Snap Photo** to capture a photo of the item on your shelf using your device camera, or choose an existing image from your photo gallery.
-   - Enter both English and Arabic product names, select a category (Fresh Produce, Dairy & Eggs, Bakery, Pantry, Beverages, Snacks), set stock count, pricing in AED, and expiry date.
-3. **Promotions & Clearance Sales**:
-   - Tap **Manage Sale Price** on any product card.
+2. **Instant Quick Stock Adjustments (+1 / -1)**:
+   - Tap the dedicated **+1** or **-1** buttons directly on any product card or low-stock pill to instantly adjust stock on the fly with zero UI lag.
+   - For fast case replenishment, use the 1-tap **+6**, **+12**, or **+24** restock shortcuts.
+3. **Full Product Editing**:
+   - Tap **Edit** on any product card to open the comprehensive edit modal.
+   - Modify product titles (English & Arabic), barcodes, SKUs, categories (Fresh Produce, Dairy & Eggs, Bakery, Pantry, Beverages, Snacks, Household, Personal Care), retail price, wholesale COGS, stock levels, low-stock reorder thresholds, supplier assignments, and expiry dates.
+4. **Adding New Products & Taking Packaging Photos**:
+   - Tap **+ Add New Product** or use the **Camera Barcode Scanner**.
+   - Tap **Snap Photo** to capture shelf packaging photos directly via camera, or choose from your photo gallery.
+   - Set stock count, pricing in AED, and expiration date.
+5. **Promotions & Clearance Sales**:
+   - Tap **Manage Sale Price** or edit sale pricing directly on the product card.
    - Toggle **Sale Active** and input the discounted price.
-   - Discounted items automatically gain promotional badges and show up on the customer app under the **🔥 Special Offers** section.
-4. **Expiry Radar & Supplier Returns**:
-   - **Nearing Expiry (Within 7 Days)**: Items appear in an alert banner at the top of your stock view. Tap to mark them 30%–50% off or initiate a supplier return.
-   - **Expired Goods**: Expired products are automatically removed from customer view. Tap **Return to Supplier** to send a WhatsApp return request with one tap.
+   - Discounted items automatically display promotional badges and appear under **🔥 Special Offers** in the customer storefront.
+6. **Expiry Radar & Supplier Returns**:
+   - **Nearing Expiry (Within 7 Days)**: Alert banners highlight expiring inventory. Tap to mark items 30%–50% off or initiate a supplier return.
+   - **Expired Goods**: Expired products are automatically hidden from customer view. Tap **Return to Supplier** to dispatch a WhatsApp return request with one tap.
 
 ---
 

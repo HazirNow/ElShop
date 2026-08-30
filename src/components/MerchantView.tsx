@@ -43,7 +43,9 @@ import {
   QrCode,
   Sliders,
   Printer,
-  Download
+  Download,
+  Scan,
+  Barcode
 } from 'lucide-react';
 import { AppState, Order, Product, Rider, Supplier, CustomerProfile, ProductCategory, Language } from '../types';
 import { updateOrder, updateProduct, createProduct, deleteProduct, createSupplier, deleteSupplier, submitSettlement, updateCustomer, updateStore } from '../api';
@@ -160,6 +162,7 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
   const [selectedCustForAdjustment, setSelectedCustForAdjustment] = useState<CustomerProfile | null>(null);
   const [showOfflineModal, setShowOfflineModal] = useState(false);
   const [showOfflineCounterModal, setShowOfflineCounterModal] = useState(false);
+  const [counterScannerDefaultOpen, setCounterScannerDefaultOpen] = useState(false);
   const [showCameraPromptModal, setShowCameraPromptModal] = useState(false);
   const [showShiftReconciliationModal, setShowShiftReconciliationModal] = useState(false);
   const [showCashierGuideModal, setShowCashierGuideModal] = useState(false);
@@ -204,6 +207,8 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
   const [newProdName, setNewProdName] = useState('');
   const [newProdNameAr, setNewProdNameAr] = useState('');
   const [newProdCategory, setNewProdCategory] = useState<ProductCategory>('Pantry');
+  const [newProdBarcode, setNewProdBarcode] = useState('');
+  const [newProdSku, setNewProdSku] = useState('');
   const [newProdPrice, setNewProdPrice] = useState('');
   const [newProdOriginalPrice, setNewProdOriginalPrice] = useState('');
   const [newProdIsOnSale, setNewProdIsOnSale] = useState(false);
@@ -214,6 +219,29 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
   const [newProdImage, setNewProdImage] = useState('');
   const [newProdSupplierId, setNewProdSupplierId] = useState('');
   const [newProdExpiryDate, setNewProdExpiryDate] = useState('');
+
+  // Full Edit Product Modal State
+  const [editingFullProduct, setEditingFullProduct] = useState<Product | null>(null);
+  const [editProdName, setEditProdName] = useState('');
+  const [editProdNameAr, setEditProdNameAr] = useState('');
+  const [editProdBarcode, setEditProdBarcode] = useState('');
+  const [editProdSku, setEditProdSku] = useState('');
+  const [editProdCategory, setEditProdCategory] = useState<ProductCategory>('Pantry');
+  const [editProdPrice, setEditProdPrice] = useState('');
+  const [editProdOriginalPrice, setEditProdOriginalPrice] = useState('');
+  const [editProdCogs, setEditProdCogs] = useState('');
+  const [editProdStock, setEditProdStock] = useState('0');
+  const [editProdThreshold, setEditProdThreshold] = useState('5');
+  const [editProdUnit, setEditProdUnit] = useState('');
+  const [editProdUnitAr, setEditProdUnitAr] = useState('');
+  const [editProdImage, setEditProdImage] = useState('');
+  const [editProdSupplierId, setEditProdSupplierId] = useState('');
+  const [editProdExpiryDate, setEditProdExpiryDate] = useState('');
+  const [editProdIsOnSale, setEditProdIsOnSale] = useState(false);
+  const [editProdInStock, setEditProdInStock] = useState(true);
+
+  // Optimistic stock override dictionary for zero-lag UI stock updates
+  const [optimisticStockOverrides, setOptimisticStockOverrides] = useState<Record<string, number>>({});
 
   // Low-Stock Alert System State
   const [showLowStockAlerts, setShowLowStockAlerts] = useState<boolean>(true);
@@ -403,6 +431,8 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
         name: newProdName,
         nameAr: newProdNameAr || newProdName,
         category: newProdCategory,
+        barcode: newProdBarcode.trim() || undefined,
+        sku: newProdSku.trim() || undefined,
         price: newProdIsOnSale ? (discP ?? rawPrice) : regP,
         regularPrice: regP,
         discountedPrice: discP,
@@ -423,6 +453,8 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
       // Reset form
       setNewProdName('');
       setNewProdNameAr('');
+      setNewProdBarcode('');
+      setNewProdSku('');
       setNewProdPrice('');
       setNewProdOriginalPrice('');
       setNewProdIsOnSale(false);
@@ -608,8 +640,9 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
   };
 
   const handleToggleProductStock = async (product: Product) => {
+    const nextInStock = !product.inStock;
     try {
-      await updateProduct(product.id, { inStock: !product.inStock });
+      await updateProduct(product.id, { inStock: nextInStock });
       onRefresh();
     } catch (err) {
       console.error(err);
@@ -617,32 +650,125 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
   };
 
   const handleProductStockDelta = async (product: Product, delta: number) => {
-    const nextStock = Math.max(0, product.stock + delta);
+    const currentStock = optimisticStockOverrides[product.id] !== undefined 
+      ? optimisticStockOverrides[product.id] 
+      : product.stock;
+    const nextStock = Math.max(0, currentStock + delta);
+    
+    // Instant local optimistic update for zero-latency response
+    setOptimisticStockOverrides((prev) => ({ ...prev, [product.id]: nextStock }));
+
+    // Haptic feedback if supported on mobile POS devices
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      try {
+        navigator.vibrate(20);
+      } catch {}
+    }
+
     try {
       await updateProduct(product.id, { stock: nextStock, inStock: nextStock > 0 });
       onRefresh();
     } catch (err) {
-      console.error(err);
+      console.error('Failed to update product stock:', err);
+      // Revert optimistic override on network failure
+      setOptimisticStockOverrides((prev) => {
+        const copy = { ...prev };
+        delete copy[product.id];
+        return copy;
+      });
     }
   };
 
-  // Settlement computations
+  const handleOpenEditProduct = (prod: Product) => {
+    setEditingFullProduct(prod);
+    setEditProdName(prod.name || '');
+    setEditProdNameAr(prod.nameAr || '');
+    setEditProdBarcode(prod.barcode || '');
+    setEditProdSku(prod.sku || '');
+    setEditProdCategory(prod.category || 'Pantry');
+    const isSale = Boolean(prod.sale ?? prod.isOnSale);
+    const regP = prod.regularPrice ?? prod.originalPrice ?? prod.price;
+    const discP = prod.discountedPrice ?? prod.price;
+    setEditProdPrice(isSale && discP ? discP.toString() : regP.toString());
+    setEditProdOriginalPrice(regP ? regP.toString() : '');
+    setEditProdCogs(prod.cogs !== undefined ? prod.cogs.toString() : (prod.costPrice !== undefined ? prod.costPrice.toString() : ''));
+    setEditProdStock(prod.stock.toString());
+    setEditProdThreshold((prod.lowStockThreshold ?? 5).toString());
+    setEditProdUnit(prod.unit || '1 Unit');
+    setEditProdUnitAr(prod.unitAr || '١ حبة');
+    setEditProdImage(prod.image || '');
+    setEditProdSupplierId(prod.supplierId || '');
+    setEditProdExpiryDate(prod.expiryDate || '');
+    setEditProdIsOnSale(isSale);
+    setEditProdInStock(prod.inStock);
+  };
+
+  const handleSaveEditProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingFullProduct) return;
+    const priceNum = parseFloat(editProdPrice) || 0;
+    const regPriceNum = parseFloat(editProdOriginalPrice) || priceNum;
+    const cogsNum = editProdCogs ? parseFloat(editProdCogs) : undefined;
+    const stockNum = parseInt(editProdStock, 10) || 0;
+    const thresholdNum = parseInt(editProdThreshold, 10) || 5;
+
+    try {
+      await updateProduct(editingFullProduct.id, {
+        name: editProdName,
+        nameAr: editProdNameAr || editProdName,
+        barcode: editProdBarcode.trim() || undefined,
+        sku: editProdSku.trim() || undefined,
+        category: editProdCategory,
+        price: editProdIsOnSale ? priceNum : regPriceNum,
+        regularPrice: regPriceNum,
+        discountedPrice: editProdIsOnSale ? priceNum : undefined,
+        sale: editProdIsOnSale,
+        isOnSale: editProdIsOnSale,
+        cogs: cogsNum,
+        costPrice: cogsNum,
+        stock: stockNum,
+        inStock: editProdInStock && stockNum > 0,
+        lowStockThreshold: thresholdNum,
+        unit: editProdUnit || '1 Unit',
+        unitAr: editProdUnitAr || '١ حبة',
+        image: editProdImage || editingFullProduct.image,
+        supplierId: editProdSupplierId || undefined,
+        expiryDate: editProdExpiryDate || undefined,
+      });
+      setOptimisticStockOverrides((prev) => {
+        const copy = { ...prev };
+        delete copy[editingFullProduct.id];
+        return copy;
+      });
+      setEditingFullProduct(null);
+      onRefresh();
+    } catch (err) {
+      console.error('Failed to update product details:', err);
+    }
+  };
+
+  // Settlement computations (calculated in integer fils to avoid floating point drift)
   const currentSettlementRider = storeRiders.find((r) => r.id === settlementRiderId) || storeRiders[0];
   const riderCompletedOrders = storeOrders.filter(
     (o) => o.riderId === currentSettlementRider?.id && o.status === 'delivered'
   );
 
   // Expected cash is sum of Cash orders (Card & Khata don't require cash collection from rider)
-  const expectedCashTotal = riderCompletedOrders
+  const expectedCashTotalFils = riderCompletedOrders
     .filter((o) => o.paymentMethod === 'cash')
-    .reduce((sum, o) => sum + o.total, 0);
+    .reduce((sum, o) => sum + Math.round((o.total || 0) * 100), 0);
+  const expectedCashTotal = expectedCashTotalFils / 100;
 
-  const parsedActualCash = parseFloat(actualCashInput) || 0;
-  const cashVariance = parsedActualCash - expectedCashTotal;
+  const hasActualCashEntered = actualCashInput.trim() !== '';
+  const parsedActualCash = hasActualCashEntered ? parseFloat(actualCashInput) || 0 : 0;
+  const actualCashFils = hasActualCashEntered ? Math.round(parsedActualCash * 100) : 0;
+  const cashVarianceFils = hasActualCashEntered ? actualCashFils - expectedCashTotalFils : 0;
+  const cashVariance = cashVarianceFils / 100;
+  const isSettlementBalanced = hasActualCashEntered && cashVarianceFils === 0;
 
   const handleSubmitSettlementAction = async (statusOverride?: 'approved' | 'disputed') => {
     if (!currentSettlementRider) return;
-    const finalStatus = statusOverride || (cashVariance === 0 ? 'approved' : 'disputed');
+    const finalStatus = statusOverride || (isSettlementBalanced ? 'approved' : 'disputed');
     try {
       await submitSettlement({
         storeId: store.id,
@@ -653,7 +779,8 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
         status: finalStatus,
         notes: settlementNotes,
       });
-      alert(`Settlement submitted (${finalStatus.toUpperCase()})`);
+      setActualCashInput('');
+      setSettlementNotes('');
       onRefresh();
     } catch (err) {
       console.error(err);
@@ -730,7 +857,14 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
         isOnline={isOnline}
         pendingSyncCount={pendingCount}
         onOpenOfflineModal={() => setShowOfflineModal(true)}
-        onOpenQuickOrderModal={() => setShowOfflineCounterModal(true)}
+        onOpenQuickOrderModal={() => {
+          setCounterScannerDefaultOpen(false);
+          setShowOfflineCounterModal(true);
+        }}
+        onOpenBarcodeScanner={() => {
+          setCounterScannerDefaultOpen(true);
+          setShowOfflineCounterModal(true);
+        }}
         onOpenElevatorPosterModal={() => setShowElevatorPosterModal(true)}
         onOpenCashierGuide={() => setShowCashierGuideModal(true)}
         onOpenUpgradeModal={handleOpenUpgradeModal}
@@ -1180,31 +1314,51 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
 
                     {/* Low stock SKU pills with 1-click Quick Restock */}
                     <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                      {lowStockProducts.slice(0, 5).map((lp) => (
-                        <div
-                          key={lp.id}
-                          className="bg-slate-900/90 border border-rose-500/60 rounded-xl px-2.5 py-1 text-[11px] flex items-center gap-2 shadow-sm"
-                        >
-                          <span className="font-bold text-white max-w-[130px] truncate">{isRtl ? lp.nameAr : lp.name}</span>
-                          <span className="bg-rose-600 text-white font-black px-1.5 py-0.2 rounded text-[10px]">
-                            {lp.stock} left (limit &lt; {getProductThreshold(lp)})
-                          </span>
-                          <button
-                            onClick={() => handleProductStockDelta(lp, 12)}
-                            className="text-[9px] bg-emerald-900/90 hover:bg-emerald-700 text-emerald-200 border border-emerald-500/50 font-bold px-1.5 py-0.5 rounded transition-all"
-                            title="Quick +12 Restock"
+                      {lowStockProducts.slice(0, 5).map((lp) => {
+                        const lpStock = optimisticStockOverrides[lp.id] !== undefined ? optimisticStockOverrides[lp.id] : lp.stock;
+                        return (
+                          <div
+                            key={lp.id}
+                            className="bg-slate-900/90 border border-rose-500/60 rounded-xl px-2.5 py-1 text-[11px] flex items-center gap-1.5 shadow-sm"
                           >
-                            +12
-                          </button>
-                          <button
-                            onClick={() => handleOpenReorderModal(lp)}
-                            className="text-[9px] bg-amber-600 hover:bg-amber-500 text-white font-bold px-1.5 py-0.5 rounded transition-all"
-                            title="Reorder on WhatsApp"
-                          >
-                            Reorder
-                          </button>
-                        </div>
-                      ))}
+                            <span className="font-bold text-white max-w-[120px] truncate">{isRtl ? lp.nameAr : lp.name}</span>
+                            <span className="bg-rose-600 text-white font-black px-1.5 py-0.2 rounded text-[10px]">
+                              {lpStock} left
+                            </span>
+                            {/* -1 Quick Adjustment Button */}
+                            <button
+                              disabled={lpStock <= 0}
+                              onClick={() => handleProductStockDelta(lp, -1)}
+                              className="text-[9px] bg-slate-800 hover:bg-rose-900 text-rose-300 disabled:opacity-30 border border-slate-700 font-black px-1.5 py-0.5 rounded transition-all"
+                              title="Decrease stock by 1 (-1)"
+                            >
+                              -1
+                            </button>
+                            {/* +1 Quick Adjustment Button */}
+                            <button
+                              onClick={() => handleProductStockDelta(lp, 1)}
+                              className="text-[9px] bg-emerald-600 hover:bg-emerald-500 text-white font-black px-1.5 py-0.5 rounded transition-all shadow-sm"
+                              title="Increase stock by 1 (+1)"
+                            >
+                              +1
+                            </button>
+                            <button
+                              onClick={() => handleProductStockDelta(lp, 12)}
+                              className="text-[9px] bg-emerald-900/90 hover:bg-emerald-700 text-emerald-200 border border-emerald-500/50 font-bold px-1.5 py-0.5 rounded transition-all"
+                              title="Quick +12 Restock"
+                            >
+                              +12
+                            </button>
+                            <button
+                              onClick={() => handleOpenReorderModal(lp)}
+                              className="text-[9px] bg-amber-600 hover:bg-amber-500 text-white font-bold px-1.5 py-0.5 rounded transition-all"
+                              title="Reorder on WhatsApp"
+                            >
+                              Reorder
+                            </button>
+                          </div>
+                        );
+                      })}
                       {lowStockProducts.length > 5 && (
                         <button
                           onClick={() => setInvFilter('low_stock')}
@@ -1362,15 +1516,22 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
           <div className="flex-1 overflow-y-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {storeProducts
               .filter((p) => {
-                const matchesSearch = p.name.toLowerCase().includes(invSearch.toLowerCase()) || p.nameAr.includes(invSearch);
+                const searchLower = invSearch.toLowerCase();
+                const matchesSearch =
+                  p.name.toLowerCase().includes(searchLower) ||
+                  p.nameAr.includes(invSearch) ||
+                  (p.barcode && p.barcode.toLowerCase().includes(searchLower)) ||
+                  (p.sku && p.sku.toLowerCase().includes(searchLower));
                 if (!matchesSearch) return false;
                 if (invFilter === 'sale') return Boolean(p.sale ?? p.isOnSale);
                 if (invFilter === 'low_stock') return isProductLowStock(p);
                 return true;
               })
               .map((p) => {
+                const pStock = optimisticStockOverrides[p.id] !== undefined ? optimisticStockOverrides[p.id] : p.stock;
                 const threshold = getProductThreshold(p);
-                const isLowStock = isProductLowStock(p);
+                const isLowStock = (p.inStock || pStock > 0) && pStock > 0 && pStock < threshold;
+                const isOutOfStock = !p.inStock || pStock === 0;
                 const assignedSupplier = suppliers.find((s) => s.id === p.supplierId);
                 const isSale = Boolean(p.sale ?? p.isOnSale);
                 const regP = p.regularPrice ?? p.originalPrice ?? p.price;
@@ -1394,7 +1555,7 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
                         ? 'border-rose-500/80 bg-rose-950/20'
                         : isExpiringSoon
                         ? 'border-amber-500/80 bg-amber-950/20'
-                        : !p.inStock
+                        : isOutOfStock
                         ? 'border-rose-500/50 bg-rose-950/10'
                         : isLowStock && showLowStockAlerts
                         ? 'border-2 border-rose-500 bg-rose-950/25 ring-2 ring-rose-500/25 shadow-lg shadow-rose-950/40'
@@ -1450,14 +1611,25 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
                           </div>
                         </div>
 
-                        {/* Delete Button */}
-                        <button
-                          onClick={() => handleDeleteProductAction(p.id)}
-                          className="text-slate-500 hover:text-rose-400 p-1.5 rounded-lg hover:bg-slate-700 transition-all"
-                          title="Delete Product"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        {/* Actions: Edit Full Product + Delete Button */}
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditProduct(p)}
+                            className="text-slate-400 hover:text-emerald-400 p-1.5 rounded-lg hover:bg-slate-700 transition-all"
+                            title="Edit Product Details (Full Modal)"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteProductAction(p.id)}
+                            className="text-slate-500 hover:text-rose-400 p-1.5 rounded-lg hover:bg-slate-700 transition-all"
+                            title="Delete Product"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
 
                       {/* Badges & Alert Status Row */}
@@ -1465,7 +1637,7 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
                         {isLowStock && showLowStockAlerts && (
                           <span className="bg-rose-600 text-white border border-rose-400 text-[9px] font-black px-2 py-0.5 rounded-md flex items-center gap-1 shadow animate-pulse">
                             <AlertTriangle className="w-3 h-3 text-white" />
-                            <span>🚨 LOW STOCK ({p.stock} units left • Alert &lt; {threshold})</span>
+                            <span>🚨 LOW STOCK ({pStock} units left • Alert &lt; {threshold})</span>
                           </span>
                         )}
 
@@ -1501,36 +1673,66 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
                             Supplier: {assignedSupplier.name}
                           </span>
                         )}
+
+                        {p.barcode && (
+                          <span className="bg-slate-900/90 text-emerald-400 font-mono border border-emerald-500/30 text-[9px] px-2 py-0.5 rounded-md flex items-center gap-1 font-semibold" title={`Barcode: ${p.barcode}`}>
+                            <Scan className="w-2.5 h-2.5 text-emerald-400" />
+                            <span>#{p.barcode}</span>
+                          </span>
+                        )}
+
+                        {p.sku && !p.barcode && (
+                          <span className="bg-slate-900/90 text-sky-400 font-mono border border-sky-500/30 text-[9px] px-2 py-0.5 rounded-md flex items-center gap-1 font-semibold" title={`SKU: ${p.sku}`}>
+                            <span>SKU: {p.sku}</span>
+                          </span>
+                        )}
                       </div>
                     </div>
 
                     {/* Controls Footer */}
                     <div className="pt-2.5 border-t border-slate-700/80 space-y-2">
-                      {/* Stock Stepper, Fast Restock & In Stock Toggle */}
+                      {/* Direct +1 and -1 Quick Stock Adjustment Controls */}
                       <div className="flex items-center justify-between gap-2 flex-wrap">
-                        {/* Stepper & Fast Restock */}
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <div className={`flex items-center gap-1 bg-slate-900 border rounded-lg p-1 ${
+                        {/* -1 / Stock Count / +1 Stepper & Bulk Restock Pills */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <div className={`flex items-center bg-slate-950/90 border rounded-xl p-1 gap-1 shadow-inner ${
                             isLowStock && showLowStockAlerts ? 'border-rose-500/80 ring-1 ring-rose-500/50' : 'border-slate-700'
                           }`}>
+                            {/* -1 Quick Adjustment Button */}
                             <button
+                              type="button"
+                              disabled={pStock <= 0}
                               onClick={() => handleProductStockDelta(p, -1)}
-                              className="w-5 h-5 bg-slate-800 hover:bg-slate-700 rounded flex items-center justify-center text-xs font-bold text-slate-300"
-                              title="Decrease stock by 1"
+                              className="px-2.5 py-1 bg-slate-800 hover:bg-rose-900/60 disabled:opacity-25 disabled:hover:bg-slate-800 text-rose-300 hover:text-white rounded-lg flex items-center justify-center text-xs font-black transition-all active:scale-95 shadow-sm border border-slate-700 disabled:cursor-not-allowed"
+                              title="Quick decrease stock by 1 (-1)"
                             >
-                              -
+                              -1
                             </button>
-                            <span className={`text-xs font-black px-1.5 ${
-                              isLowStock && showLowStockAlerts ? 'text-rose-400' : 'text-white'
-                            }`}>
-                              {p.stock}
-                            </span>
+
+                            {/* Stock Display */}
+                            <div className="px-2 text-center min-w-[52px]">
+                              <span className={`text-sm font-black ${
+                                pStock === 0
+                                  ? 'text-rose-400'
+                                  : isLowStock && showLowStockAlerts
+                                  ? 'text-rose-400 animate-pulse'
+                                  : 'text-emerald-400'
+                              }`}>
+                                {pStock}
+                              </span>
+                              <span className="block text-[8px] uppercase tracking-wider font-bold text-slate-400">
+                                {pStock === 1 ? 'unit' : 'units'}
+                              </span>
+                            </div>
+
+                            {/* +1 Quick Adjustment Button */}
                             <button
+                              type="button"
                               onClick={() => handleProductStockDelta(p, 1)}
-                              className="w-5 h-5 bg-slate-800 hover:bg-slate-700 rounded flex items-center justify-center text-xs font-bold text-slate-300"
-                              title="Increase stock by 1"
+                              className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg flex items-center justify-center text-xs font-black transition-all active:scale-95 shadow-sm shadow-emerald-950/50 border border-emerald-500"
+                              title="Quick increase stock by 1 (+1)"
                             >
-                              +
+                              +1
                             </button>
                           </div>
 
@@ -1539,11 +1741,12 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
                             {[6, 12, 24].map((addQty) => (
                               <button
                                 key={addQty}
+                                type="button"
                                 onClick={() => handleProductStockDelta(p, addQty)}
-                                className={`text-[9px] font-bold px-1.5 py-0.5 rounded transition-all ${
+                                className={`text-[10px] font-bold px-2 py-1 rounded-lg transition-all ${
                                   isLowStock && showLowStockAlerts
                                     ? 'bg-rose-950/80 hover:bg-rose-800 text-rose-200 border border-rose-500/60'
-                                    : 'bg-slate-900 hover:bg-emerald-800/80 text-emerald-300 border border-slate-700 hover:border-emerald-500'
+                                    : 'bg-slate-900 hover:bg-emerald-900/60 text-emerald-300 border border-slate-700 hover:border-emerald-500'
                                 }`}
                                 title={`Quick Restock +${addQty} Units`}
                               >
@@ -1555,14 +1758,15 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
 
                         {/* In Stock Toggle */}
                         <button
+                          type="button"
                           onClick={() => handleToggleProductStock(p)}
-                          className={`text-[10px] font-bold px-2.5 py-1 rounded-full border transition-all ${
-                            p.inStock
+                          className={`text-[10px] font-bold px-2.5 py-1.5 rounded-full border transition-all ${
+                            p.inStock && pStock > 0
                               ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30'
                               : 'bg-rose-500/20 text-rose-300 border-rose-500/40 hover:bg-rose-500/30'
                           }`}
                         >
-                          {p.inStock ? 'In Stock ✓' : 'Out of Stock ✕'}
+                          {p.inStock && pStock > 0 ? 'In Stock ✓' : 'Out of Stock ✕'}
                         </button>
                       </div>
 
@@ -1605,10 +1809,22 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
 
                       {/* Action Buttons Row */}
                       <div className="flex items-center gap-1.5 flex-wrap">
+                        {/* Edit Product Details Button */}
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditProduct(p)}
+                          className="bg-slate-700/80 hover:bg-slate-600 text-slate-200 hover:text-white font-bold py-1.5 px-2.5 rounded-xl text-[11px] flex items-center justify-center gap-1 transition-all border border-slate-600"
+                          title="Open Full Edit Product Modal"
+                        >
+                          <Edit3 className="w-3 h-3 text-emerald-400" />
+                          <span>Edit</span>
+                        </button>
+
                         {/* Manage Sale Price Button */}
                         <button
+                          type="button"
                           onClick={() => handleOpenSaleModal(p)}
-                          className="flex-1 bg-slate-700 hover:bg-slate-600 text-amber-300 font-bold py-1.5 rounded-xl text-[11px] flex items-center justify-center gap-1 transition-all border border-slate-600"
+                          className="flex-1 bg-slate-700/80 hover:bg-slate-600 text-amber-300 font-bold py-1.5 rounded-xl text-[11px] flex items-center justify-center gap-1 transition-all border border-slate-600"
                         >
                           <Tag className="w-3 h-3 text-amber-400" />
                           <span>{t('manageSale')}</span>
@@ -1616,6 +1832,7 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
 
                         {/* Reorder from Supplier Button */}
                         <button
+                          type="button"
                           onClick={() => handleOpenReorderModal(p)}
                           className={`flex-1 font-bold py-1.5 rounded-xl text-[11px] flex items-center justify-center gap-1 transition-all border ${
                             isLowStock && showLowStockAlerts
@@ -1629,6 +1846,7 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
 
                         {/* WhatsApp Supplier Return Request */}
                         <button
+                          type="button"
                           onClick={() => handleSendSupplierReturnWhatsApp(p, isExpired ? `Product expired on ${p.expiryDate}` : isExpiringSoon ? `Product expiring on ${p.expiryDate}` : 'Return / Stock Adjustment')}
                           className="bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-700/60 font-semibold px-2 py-1.5 rounded-xl text-[11px] flex items-center justify-center gap-1 transition-all"
                           title="Send WhatsApp Return/Exchange message to supplier"
@@ -1708,15 +1926,21 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
 
               <div className="flex justify-between items-center text-xs pt-2 border-t border-slate-800">
                 <span className="text-slate-400">{t('variance')}:</span>
-                <span className={`font-extrabold text-sm px-2.5 py-0.5 rounded ${
-                  cashVariance === 0
-                    ? 'bg-emerald-500/20 text-emerald-300'
-                    : cashVariance < 0
-                    ? 'bg-rose-500/20 text-rose-300'
-                    : 'bg-amber-500/20 text-amber-300'
-                }`}>
-                  {cashVariance.toFixed(2)} AED {cashVariance < 0 ? '(Shortage)' : cashVariance > 0 ? '(Surplus)' : '(Balanced)'}
-                </span>
+                {!hasActualCashEntered ? (
+                  <span className="text-xs font-semibold text-slate-500 bg-slate-800 px-2 py-0.5 rounded">
+                    Awaiting Cash Count
+                  </span>
+                ) : (
+                  <span className={`font-extrabold text-sm px-2.5 py-0.5 rounded ${
+                    isSettlementBalanced
+                      ? 'bg-emerald-500/20 text-emerald-300'
+                      : cashVariance < 0
+                      ? 'bg-rose-500/20 text-rose-300'
+                      : 'bg-amber-500/20 text-amber-300'
+                  }`}>
+                    {cashVariance > 0 ? `+${cashVariance.toFixed(2)}` : cashVariance.toFixed(2)} AED {cashVariance < 0 ? '(Shortage)' : cashVariance > 0 ? '(Surplus)' : '(Balanced)'}
+                  </span>
+                )}
               </div>
             </div>
 
@@ -2414,6 +2638,94 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
                   />
                 </div>
 
+                {/* Manual Barcode & SKU Entry for Counter Scanning */}
+                <div className="bg-slate-800/90 p-3 rounded-2xl border border-slate-700/80 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-slate-300 font-bold text-xs flex items-center gap-1.5">
+                      <Barcode className="w-4 h-4 text-emerald-400" />
+                      <span>{isRtl ? 'الباركود الفعلي ورمز SKU (للمسح الضوئي)' : 'Physical SKU Barcode (For Future Scanning)'}</span>
+                    </label>
+                    <span className="text-[10px] text-emerald-400 font-semibold">
+                      {isRtl ? 'قارئ الليزر والكاميرا' : 'POS Scanner Ready'}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <div className="sm:col-span-2 relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                        <Scan className="w-3.5 h-3.5 text-emerald-500" />
+                      </div>
+                      <input
+                        type="text"
+                        placeholder={isRtl ? 'أدخل أو امسح الباركود (مثل 6281007001254)...' : 'Type or scan barcode (e.g. 6281007001254)...'}
+                        value={newProdBarcode}
+                        onChange={(e) => setNewProdBarcode(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-9 pr-3 py-2 text-white font-mono text-xs focus:ring-2 focus:ring-[#0B6E4F] focus:outline-none placeholder-slate-500"
+                      />
+                    </div>
+                    <div>
+                      <input
+                        type="text"
+                        placeholder={isRtl ? 'رمز SKU (اختياري)...' : 'SKU Code (Optional)...'}
+                        value={newProdSku}
+                        onChange={(e) => setNewProdSku(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono text-xs focus:ring-2 focus:ring-[#0B6E4F] focus:outline-none placeholder-slate-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Helper Actions: EAN-13 Generator & Status */}
+                  <div className="flex items-center justify-between flex-wrap gap-1.5 pt-1 border-t border-slate-700/60">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const random9 = Array.from({ length: 9 }, () => Math.floor(Math.random() * 10)).join('');
+                          const partial = `629${random9}`;
+                          let sum = 0;
+                          for (let i = 0; i < 12; i++) {
+                            sum += parseInt(partial[i], 10) * (i % 2 === 0 ? 1 : 3);
+                          }
+                          const checksum = (10 - (sum % 10)) % 10;
+                          const generatedBarcode = `${partial}${checksum}`;
+                          setNewProdBarcode(generatedBarcode);
+                          if (!newProdSku) {
+                            setNewProdSku(`SKU-${generatedBarcode.slice(-6)}`);
+                          }
+                        }}
+                        className="text-[10px] bg-slate-900 hover:bg-slate-700 text-emerald-400 border border-emerald-500/30 font-semibold px-2 py-1 rounded-lg flex items-center gap-1 transition-all"
+                      >
+                        <Sparkles className="w-3 h-3 text-emerald-400" />
+                        <span>{isRtl ? 'توليد باركود تلقائي (EAN-13)' : 'Auto-Generate EAN-13'}</span>
+                      </button>
+
+                      {newProdBarcode && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setNewProdBarcode('');
+                            setNewProdSku('');
+                          }}
+                          className="text-[10px] text-rose-400 hover:text-rose-300 underline px-1"
+                        >
+                          {isRtl ? 'مسح' : 'Clear'}
+                        </button>
+                      )}
+                    </div>
+
+                    {newProdBarcode ? (
+                      <span className="text-[10px] font-mono text-emerald-300 bg-emerald-950/70 border border-emerald-500/40 px-2 py-0.5 rounded-md flex items-center gap-1 font-bold">
+                        <Check className="w-3 h-3 text-emerald-400" />
+                        <span>{isRtl ? 'تم ربط الباركود بنجاح' : 'Barcode Linked'}</span>
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-slate-400">
+                        {isRtl ? 'يمكّن الكاشير من مسح السلعة فوراً بالليزر' : 'Allows counter scanner gun & camera auto-recognition'}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-3 gap-3">
                   <div>
                     <label className="block text-slate-400 font-semibold mb-1">Category</label>
@@ -2428,6 +2740,8 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
                       <option value="Pantry">Pantry</option>
                       <option value="Snacks">Snacks</option>
                       <option value="Fresh Produce">Fresh Produce</option>
+                      <option value="Household">Household</option>
+                      <option value="Personal Care">Personal Care</option>
                     </select>
                   </div>
 
@@ -3255,13 +3569,17 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
       {/* Offline Counter POS & Quick Phone Order Modal */}
       <OfflineCounterOrderModal
         isOpen={showOfflineCounterModal}
-        onClose={() => setShowOfflineCounterModal(false)}
+        onClose={() => {
+          setShowOfflineCounterModal(false);
+          setCounterScannerDefaultOpen(false);
+        }}
         products={storeProducts}
         customers={state.customers || []}
         khataTransactions={state.khataTransactions || []}
         store={store}
         lang={lang}
         onOrderCreated={onRefresh}
+        initialScannerOpen={counterScannerDefaultOpen}
       />
 
       {/* End-of-Shift Cash Drawer Reconciliation Modal */}
@@ -3292,6 +3610,339 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
         onClose={() => setShowCameraPromptModal(false)}
         lang={lang}
       />
+
+      {/* Full Edit Product Modal */}
+      <AnimatePresence>
+        {editingFullProduct && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
+            onClick={() => setEditingFullProduct(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-slate-900 border border-slate-700 rounded-3xl p-6 max-w-lg w-full shadow-2xl text-slate-200 my-8 max-h-[90vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between pb-4 border-b border-slate-800 mb-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
+                    <Edit3 className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-base text-white">Edit Product</h3>
+                    <p className="text-xs text-slate-400">Update pricing, inventory, barcode, and catalog details</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditingFullProduct(null)}
+                  className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-all"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveEditProduct} className="space-y-4 text-xs">
+                {/* Product Names */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-slate-400 font-bold mb-1">Product Name (EN) *</label>
+                    <input
+                      type="text"
+                      required
+                      value={editProdName}
+                      onChange={(e) => setEditProdName(e.target.value)}
+                      className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-400 font-bold mb-1">Product Name (AR)</label>
+                    <input
+                      type="text"
+                      dir="rtl"
+                      value={editProdNameAr}
+                      onChange={(e) => setEditProdNameAr(e.target.value)}
+                      className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Category & Unit */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-slate-400 font-bold mb-1">Category</label>
+                    <select
+                      value={editProdCategory}
+                      onChange={(e) => setEditProdCategory(e.target.value as ProductCategory)}
+                      className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-emerald-500"
+                    >
+                      {[
+                        'Dairy & Eggs',
+                        'Bakery',
+                        'Beverages',
+                        'Pantry',
+                        'Snacks',
+                        'Fresh Produce',
+                        'Household',
+                        'Personal Care',
+                      ].map((cat) => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-slate-400 font-bold mb-1">Unit (EN)</label>
+                    <input
+                      type="text"
+                      value={editProdUnit}
+                      onChange={(e) => setEditProdUnit(e.target.value)}
+                      placeholder="e.g. 1 pc, 500g"
+                      className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-400 font-bold mb-1">Unit (AR)</label>
+                    <input
+                      type="text"
+                      dir="rtl"
+                      value={editProdUnitAr}
+                      onChange={(e) => setEditProdUnitAr(e.target.value)}
+                      placeholder="مثال: ١ حبة"
+                      className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Barcode & SKU */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-slate-400 font-bold mb-1 flex items-center justify-between">
+                      <span>Barcode / EAN</span>
+                      <span className="text-[10px] text-emerald-400 font-mono">Scanner ready</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={editProdBarcode}
+                        onChange={(e) => setEditProdBarcode(e.target.value)}
+                        placeholder="Scan or enter barcode..."
+                        className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-8 pr-3 py-2.5 text-white font-mono text-xs focus:outline-none focus:border-emerald-500"
+                      />
+                      <Scan className="w-4 h-4 text-emerald-400 absolute left-2.5 top-3" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-slate-400 font-bold mb-1">Internal SKU</label>
+                    <input
+                      type="text"
+                      value={editProdSku}
+                      onChange={(e) => setEditProdSku(e.target.value)}
+                      placeholder="Optional SKU code"
+                      className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-white font-mono text-xs focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Pricing & Cost */}
+                <div className="bg-slate-950/60 border border-slate-800 rounded-2xl p-3.5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-300">Pricing & Cost ({t('currency')})</span>
+                    <label className="flex items-center gap-2 cursor-pointer text-[11px] font-bold text-amber-400">
+                      <input
+                        type="checkbox"
+                        checked={editProdIsOnSale}
+                        onChange={(e) => setEditProdIsOnSale(e.target.checked)}
+                        className="w-3.5 h-3.5 accent-amber-500 rounded"
+                      />
+                      <span>Mark on Sale / Discount</span>
+                    </label>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-slate-400 font-bold mb-1">
+                        {editProdIsOnSale ? 'Regular Price' : 'Selling Price *'}
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        required
+                        value={editProdOriginalPrice}
+                        onChange={(e) => setEditProdOriginalPrice(e.target.value)}
+                        className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                    {editProdIsOnSale && (
+                      <div>
+                        <label className="block text-amber-400 font-bold mb-1">Sale Price *</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          required
+                          value={editProdPrice}
+                          onChange={(e) => setEditProdPrice(e.target.value)}
+                          className="w-full bg-amber-950/30 border border-amber-500/50 rounded-xl px-3 py-2 text-amber-300 font-bold focus:outline-none focus:border-amber-500"
+                        />
+                      </div>
+                    )}
+                    <div>
+                      <label className="block text-slate-400 font-bold mb-1">Cost / COGS (AED)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={editProdCogs}
+                        onChange={(e) => setEditProdCogs(e.target.value)}
+                        placeholder="For margin %"
+                        className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Stock, Low Stock Limit, In Stock Status */}
+                <div className="bg-slate-950/60 border border-slate-800 rounded-2xl p-3.5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-300">Inventory Levels</span>
+                    <label className="flex items-center gap-2 cursor-pointer text-[11px] font-bold">
+                      <input
+                        type="checkbox"
+                        checked={editProdInStock}
+                        onChange={(e) => setEditProdInStock(e.target.checked)}
+                        className="w-3.5 h-3.5 accent-emerald-500 rounded"
+                      />
+                      <span className={editProdInStock ? 'text-emerald-400' : 'text-rose-400'}>
+                        {editProdInStock ? 'Active & Available' : 'Mark Out of Stock'}
+                      </span>
+                    </label>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-slate-400 font-bold mb-1">Stock on Hand</label>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const cur = parseInt(editProdStock, 10) || 0;
+                            setEditProdStock(Math.max(0, cur - 1).toString());
+                          }}
+                          className="w-9 h-9 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl font-black text-rose-300 text-sm"
+                        >
+                          -1
+                        </button>
+                        <input
+                          type="number"
+                          min="0"
+                          required
+                          value={editProdStock}
+                          onChange={(e) => setEditProdStock(e.target.value)}
+                          className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-center text-white font-black text-sm focus:outline-none focus:border-emerald-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const cur = parseInt(editProdStock, 10) || 0;
+                            setEditProdStock((cur + 1).toString());
+                          }}
+                          className="w-9 h-9 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl font-black text-emerald-300 text-sm"
+                        >
+                          +1
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-slate-400 font-bold mb-1">Low Stock Alert Limit (&lt;)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={editProdThreshold}
+                        onChange={(e) => setEditProdThreshold(e.target.value)}
+                        className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold focus:outline-none focus:border-amber-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Supplier & Expiry Date */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-slate-400 font-bold mb-1">Assigned Supplier</label>
+                    <select
+                      value={editProdSupplierId}
+                      onChange={(e) => setEditProdSupplierId(e.target.value)}
+                      className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-emerald-500"
+                    >
+                      <option value="">-- No Supplier Assigned --</option>
+                      {suppliers.map((s) => (
+                        <option key={s.id} value={s.id}>{s.name} ({s.company || s.category})</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-slate-400 font-bold mb-1">Expiry Date (YYYY-MM-DD)</label>
+                    <input
+                      type="date"
+                      value={editProdExpiryDate}
+                      onChange={(e) => setEditProdExpiryDate(e.target.value)}
+                      className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Image URL & Quick Direct Camera Capture */}
+                <div>
+                  <label className="block text-slate-400 font-bold mb-1">Image URL</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={editProdImage}
+                      onChange={(e) => setEditProdImage(e.target.value)}
+                      placeholder="https://... or upload photo"
+                      className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCameraTargetProduct(editingFullProduct);
+                        nativeCameraInputRef.current?.click();
+                      }}
+                      className="bg-slate-800 hover:bg-emerald-600 border border-slate-700 text-slate-300 hover:text-white px-3 py-2 rounded-xl flex items-center gap-1.5 font-bold transition-all"
+                      title="Snap photo with camera"
+                    >
+                      <Camera className="w-3.5 h-3.5" />
+                      <span>Snap</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Footer Buttons */}
+                <div className="flex items-center gap-3 pt-3 border-t border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setEditingFullProduct(null)}
+                    className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2.5 rounded-xl transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 bg-[#0B6E4F] hover:bg-emerald-600 text-white font-extrabold py-2.5 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>Save Product Changes</span>
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Cashier Operational Quick Guide (Printable 1-Page Cheat Sheet) */}
       <CashierQuickGuideModal

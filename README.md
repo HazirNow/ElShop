@@ -70,7 +70,9 @@
   - Variance detection and reason auditing (*Counting Error, Petty Cash Restock, Small Change Forgiven, Unrecorded Withdrawal, Surplus Tips*).
   - 1-click formatted WhatsApp audit certificate dispatched to owner or accountant.
 - **Elevator Batching Engine**: Automatic clustering of orders bound for the same residential tower to minimize lift runs.
+- **Quick-Adjustment Inventory (+1 / -1)**: Direct single-unit increments and decrements on each catalog item and low-stock pill with zero-latency optimistic updates.
 - **Fast-Restock FMCG Presets**: 1-tap replenishment buttons (`+6`, `+12`, `+24`) directly on stock management cards.
+- **Full Product Catalog Editing**: Comprehensive modal to update EN/AR titles, barcodes, SKUs, categories (Fresh Produce, Dairy & Eggs, Bakery, Pantry, Beverages, Snacks, Household, Personal Care), retail pricing, COGS, reorder thresholds, suppliers, and expiration dates.
 - **Expiry Radar & Clearance Automation**: Proactive discount suggestions (30%–50% off) for items nearing expiry (<7 days) and auto-removal of expired stock.
 - **Supplier Directory & Reorders**: Automated WhatsApp purchase orders and return requests for damaged/expired goods.
 - **Digital Khata Management**:
