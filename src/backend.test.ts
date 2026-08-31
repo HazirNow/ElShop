@@ -352,5 +352,17 @@ describe('DB-Level Telemetry Aggregations & Metadata', () => {
     expect(schema.khataTransactions).toBeDefined();
     expect(schema.customers).toBeDefined();
   });
+
+  it('should verify migration SQL file exists and contains expected DDL indexes', async () => {
+    const fs = await import('fs');
+    const path = await import('path');
+    const migrationPath = path.resolve(process.cwd(), 'drizzle/0001_add_performance_indexes.sql');
+    expect(fs.existsSync(migrationPath)).toBe(true);
+    const sqlContent = fs.readFileSync(migrationPath, 'utf8');
+    expect(sqlContent).toContain('CREATE INDEX IF NOT EXISTS orders_store_status_idx');
+    expect(sqlContent).toContain('CREATE INDEX IF NOT EXISTS khata_transactions_customer_id_idx');
+    expect(sqlContent).toContain('CREATE INDEX IF NOT EXISTS products_store_category_idx');
+  });
 });
+
 
