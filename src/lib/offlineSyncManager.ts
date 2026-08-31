@@ -504,16 +504,15 @@ class OfflineSyncManager {
     const serverTimestampStr = serverMetadata.lastUpdatedAt || serverMetadata.updatedAt;
 
     if (item.actionType === 'UPDATE_PRODUCT') {
-      const serverProduct = serverMetadata.products?.find((p: Product) => p.id === item.payload?.id);
-      const serverUpdatedAtStr = serverProduct?.updatedAt || serverTimestampStr;
+      const serverProduct = serverMetadata.products?.find((p: Product) => p.id === item.payload?.id) || {
+        name: item.payload?.data?.name || item.payload?.name || `Product #${item.payload?.id || ''}`,
+        updatedAt: serverTimestampStr || new Date().toISOString()
+      };
+      const serverUpdatedAtStr = serverProduct.updatedAt || serverTimestampStr;
 
       if (serverUpdatedAtStr) {
         const serverUpdatedAt = new Date(serverUpdatedAtStr).getTime();
         if (!isNaN(serverUpdatedAt) && !isNaN(queuedAt) && serverUpdatedAt > queuedAt) {
-          const prodName = serverProduct?.name || item.payload?.data?.name || item.payload?.name || `Product #${item.payload?.id || ''}`;
-          const serverTimeFormatted = new Date(serverUpdatedAt).toLocaleTimeString();
-          const localTimeFormatted = new Date(queuedAt).toLocaleTimeString();
-          
           return {
             serverUpdatedAt: serverUpdatedAtStr,
             localQueuedAt: item.timestamp,
@@ -526,28 +525,27 @@ class OfflineSyncManager {
                 }
               : { lastUpdatedAt: serverUpdatedAtStr },
             localState: item.payload?.data || item.payload,
-            reason: `Product "${prodName}" was modified on cloud at ${serverTimeFormatted} after offline change was queued at ${localTimeFormatted}`,
+            reason: `Product "${serverProduct.name}" was modified on cloud at ${new Date(serverProduct.updatedAt).toLocaleTimeString()} after offline change was queued at ${new Date(item.timestamp).toLocaleTimeString()}`,
           };
         }
       }
     } else if (item.actionType === 'UPDATE_ORDER') {
-      const serverOrder = serverMetadata.orders?.find((o: Order) => o.id === item.payload?.id);
-      const serverUpdatedAtStr = serverOrder?.updatedAt || serverTimestampStr;
+      const serverOrder = serverMetadata.orders?.find((o: Order) => o.id === item.payload?.id) || {
+        id: item.payload?.id || 'unknown',
+        status: item.payload?.data?.status || item.payload?.status || 'updated',
+        updatedAt: serverTimestampStr || new Date().toISOString()
+      };
+      const serverUpdatedAtStr = serverOrder.updatedAt || serverTimestampStr;
 
       if (serverUpdatedAtStr) {
         const serverUpdatedAt = new Date(serverUpdatedAtStr).getTime();
         if (!isNaN(serverUpdatedAt) && !isNaN(queuedAt) && serverUpdatedAt > queuedAt) {
-          const orderId = serverOrder?.id || item.payload?.id || 'unknown';
-          const targetStatus = item.payload?.data?.status || item.payload?.status || 'updated';
-          const serverTimeFormatted = new Date(serverUpdatedAt).toLocaleTimeString();
-          const localTimeFormatted = new Date(queuedAt).toLocaleTimeString();
-
           return {
             serverUpdatedAt: serverUpdatedAtStr,
             localQueuedAt: item.timestamp,
             serverState: serverOrder ? { status: serverOrder.status } : { lastUpdatedAt: serverUpdatedAtStr },
             localState: item.payload?.data || item.payload,
-            reason: `Order #${orderId} was modified on cloud at ${serverTimeFormatted} after offline change was queued at ${localTimeFormatted} setting status to "${targetStatus}"`,
+            reason: `Order #${serverOrder.id} was modified on cloud at ${new Date(serverOrder.updatedAt).toLocaleTimeString()} after offline change was queued at ${new Date(item.timestamp).toLocaleTimeString()} setting status to "${serverOrder.status}"`,
           };
         }
       }
