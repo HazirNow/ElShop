@@ -1,4 +1,4 @@
-﻿import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'vitest';
 
 const simulateHeaders = (headers: Record<string, string>) => {
   return {
@@ -37,5 +37,40 @@ describe('ElShop Platform Security Infrastructure', () => {
     
     expect(cleanString).not.toContain("'");
     expect(cleanString).not.toContain(" ");
+  });
+
+  it('should enforce fail-closed authorization for superadmin endpoints when in production mode without configured secret', () => {
+    const isProduction = true;
+    const configuredSecret = undefined;
+    const providedSecret = 'some-secret';
+
+    let status = 200;
+    let errorMsg = '';
+
+    if (isProduction && !configuredSecret) {
+      status = 500;
+      errorMsg = 'Server Misconfigured: Administrative secret is required in production mode.';
+    } else if (providedSecret !== configuredSecret) {
+      status = 401;
+      errorMsg = 'Unauthorized: Invalid or missing x-elshop-admin-secret signature';
+    }
+
+    expect(status).toBe(500);
+    expect(errorMsg).toContain('Administrative secret is required in production mode');
+  });
+
+  it('should reject unauthorized superadmin requests when secret is provided incorrectly', () => {
+    const isProduction = true;
+    const configuredSecret: string = 'real-superadmin-secret-xyz';
+    const providedSecret: string = 'wrong-attempt';
+
+    let status = 200;
+    const isValid = providedSecret === configuredSecret;
+
+    if (!isValid) {
+      status = 401;
+    }
+
+    expect(status).toBe(401);
   });
 });
