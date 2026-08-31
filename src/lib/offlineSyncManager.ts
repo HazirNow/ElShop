@@ -34,62 +34,106 @@ class OfflineSyncManager {
   private lastSyncedAt: Date | null = null;
   private listeners: Set<SyncListener> = new Set();
   private syncInterval: any = null;
+  private retryTimeout: any = null;
+  private consecutiveFailures: number = 0;
+  private notifyDebounceTimer: any = null;
 
   constructor() {
     if (typeof window !== 'undefined') {
       window.addEventListener('online', this.handleOnline);
       window.addEventListener('offline', this.handleOffline);
+      window.addEventListener('beforeunload', this.destroy);
 
       // Check queue count on boot
       this.refreshStatus();
 
-      // Periodic check every 20s to retry pending items if online and not simulated offline
+      // Lightweight fallback heartbeat (60s instead of aggressive 20s loop)
       this.syncInterval = setInterval(() => {
         if (this.effectiveOnlineStatus() && !this.isSyncing) {
           this.processSyncQueue();
         }
-      }, 20000);
+      }, 60000);
     }
   }
 
+  public destroy = () => {
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('online', this.handleOnline);
+      window.removeEventListener('offline', this.handleOffline);
+      window.removeEventListener('beforeunload', this.destroy);
+    }
+    if (this.syncInterval) clearInterval(this.syncInterval);
+    if (this.retryTimeout) clearTimeout(this.retryTimeout);
+    if (this.notifyDebounceTimer) clearTimeout(this.notifyDebounceTimer);
+  };
+
   public subscribe(listener: SyncListener): () => void {
     this.listeners.add(listener);
-    this.notify(listener);
+    this.notify(listener, true);
     return () => {
       this.listeners.delete(listener);
     };
   }
 
-  private async notify(targetListener?: SyncListener) {
-    try {
-      const allActive = await offlineDb.syncQueue
-        .where('status')
-        .anyOf(['pending', 'syncing', 'failed', 'conflict'])
-        .reverse()
-        .sortBy('id');
+  private async notify(targetListener?: SyncListener, immediate: boolean = false) {
+    const doNotify = async () => {
+      try {
+        const allActive = await offlineDb.syncQueue
+          .where('status')
+          .anyOf(['pending', 'syncing', 'failed', 'conflict'])
+          .reverse()
+          .sortBy('id');
 
-      const items = allActive.filter((i) => i.status !== 'conflict');
-      const conflictItems = allActive.filter((i) => i.status === 'conflict');
+        const items = allActive.filter((i) => i.status !== 'conflict');
+        const conflictItems = allActive.filter((i) => i.status === 'conflict');
 
-      const status = {
-        isOnline: this.effectiveOnlineStatus(),
-        isSimulatedOffline: this.isSimulatedOffline,
-        isSyncing: this.isSyncing,
-        syncProgress: this.syncProgress,
-        pendingCount: items.length,
-        conflictCount: conflictItems.length,
-        lastSyncedAt: this.lastSyncedAt,
-        items,
-        conflictItems,
-      };
+        const status = {
+          isOnline: this.effectiveOnlineStatus(),
+          isSimulatedOffline: this.isSimulatedOffline,
+          isSyncing: this.isSyncing,
+          syncProgress: this.syncProgress,
+          pendingCount: items.length,
+          conflictCount: conflictItems.length,
+          lastSyncedAt: this.lastSyncedAt,
+          items,
+          conflictItems,
+        };
 
-      if (targetListener) {
-        targetListener(status);
-      } else {
-        this.listeners.forEach((l) => l(status));
+        if (targetListener) {
+          targetListener(status);
+        } else {
+          this.listeners.forEach((l) => l(status));
+        }
+      } catch (err) {
+        console.warn('[OfflineSync] Notify error:', err);
       }
-    } catch (err) {
-      console.warn('[OfflineSync] Notify error:', err);
+    };
+
+    if (immediate) {
+      await doNotify();
+    } else {
+      if (this.notifyDebounceTimer) clearTimeout(this.notifyDebounceTimer);
+      this.notifyDebounceTimer = setTimeout(() => {
+        doNotify();
+      }, 100);
+    }
+  }
+
+  /**
+   * Schedule sync with optional delay (used for exponential backoff on retries)
+   */
+  public scheduleSync(delayMs: number = 0) {
+    if (this.retryTimeout) clearTimeout(this.retryTimeout);
+    if (delayMs <= 0) {
+      if (this.effectiveOnlineStatus() && !this.isSyncing) {
+        this.processSyncQueue();
+      }
+    } else {
+      this.retryTimeout = setTimeout(() => {
+        if (this.effectiveOnlineStatus() && !this.isSyncing) {
+          this.processSyncQueue();
+        }
+      }, delayMs);
     }
   }
 
@@ -109,7 +153,7 @@ class OfflineSyncManager {
     this.isSimulatedOffline = simulated;
     this.notify();
     if (!simulated && this.isOnline) {
-      this.processSyncQueue();
+      this.scheduleSync(0);
     }
   }
 
@@ -121,7 +165,7 @@ class OfflineSyncManager {
     this.isOnline = true;
     this.notify();
     if (!this.isSimulatedOffline) {
-      this.processSyncQueue();
+      this.scheduleSync(0);
     }
   };
 
@@ -131,7 +175,7 @@ class OfflineSyncManager {
   };
 
   public async refreshStatus() {
-    await this.notify();
+    await this.notify(undefined, true);
   }
 
   /**
@@ -237,18 +281,31 @@ class OfflineSyncManager {
             await offlineDb.khataTransactions.put(khataTx);
           }
 
-          // Decrement local inventory stock for ordered items
-          for (const item of (payload.items || [])) {
-            const prod = await offlineDb.products.get(item.productId);
-            if (prod) {
-              const updatedStock = Math.max(0, (prod.stock || 0) - (Number(item.quantity) || 1));
-              const updatedProd = { ...prod, stock: updatedStock, inStock: updatedStock > 0 };
-              await offlineDb.products.put(updatedProd);
-              const cachedProd = cached.products?.find((p) => p.id === item.productId);
-              if (cachedProd) {
-                cachedProd.stock = updatedStock;
-                cachedProd.inStock = updatedStock > 0;
+          // Batch decrement local inventory stock for ordered items in a single query & write
+          const itemProductIds = (payload.items || []).map((i: any) => i.productId);
+          if (itemProductIds.length > 0) {
+            const existingProds = await offlineDb.products.where('id').anyOf(itemProductIds).toArray();
+            const prodMap = new Map(existingProds.map((p) => [p.id, p]));
+            const prodsToUpdate: Product[] = [];
+
+            for (const item of (payload.items || [])) {
+              const prod = prodMap.get(item.productId);
+              if (prod) {
+                const updatedStock = Math.max(0, (prod.stock || 0) - (Number(item.quantity) || 1));
+                const updatedProd = { ...prod, stock: updatedStock, inStock: updatedStock > 0 };
+                prodMap.set(item.productId, updatedProd);
+                prodsToUpdate.push(updatedProd);
+
+                const cachedProd = cached.products?.find((p) => p.id === item.productId);
+                if (cachedProd) {
+                  cachedProd.stock = updatedStock;
+                  cachedProd.inStock = updatedStock > 0;
+                }
               }
+            }
+
+            if (prodsToUpdate.length > 0) {
+              await offlineDb.products.bulkPut(prodsToUpdate);
             }
           }
 
@@ -371,11 +428,31 @@ class OfflineSyncManager {
         } catch (error: any) {
           failed++;
           const errorMessage = error?.message || 'Sync replay failed';
-          await offlineDb.syncQueue.update(item.id!, {
-            status: 'failed',
-            retryCount: item.retryCount + 1,
-            lastError: errorMessage,
-          });
+          const newRetryCount = item.retryCount + 1;
+          const MAX_RETRIES = 5;
+
+          if (newRetryCount >= MAX_RETRIES) {
+            // Quarantine item into 'conflict' status so it stops spinning in automatic sync loops
+            // and alerts the merchant or operator for manual review / resubmission
+            conflicts++;
+            await offlineDb.syncQueue.update(item.id!, {
+              status: 'conflict',
+              retryCount: newRetryCount,
+              lastError: `Quarantined: Exceeded maximum ${MAX_RETRIES} sync attempts. Last error: ${errorMessage}`,
+              conflict: {
+                localQueuedAt: item.timestamp,
+                localState: item.payload,
+                serverState: errorMessage,
+                reason: `Sync failed ${MAX_RETRIES} times (${errorMessage}). Manual verification required.`
+              }
+            });
+          } else {
+            await offlineDb.syncQueue.update(item.id!, {
+              status: 'failed',
+              retryCount: newRetryCount,
+              lastError: errorMessage,
+            });
+          }
         }
       }
 
@@ -389,9 +466,20 @@ class OfflineSyncManager {
 
       if (succeeded > 0) {
         this.lastSyncedAt = new Date();
+        this.consecutiveFailures = 0;
+      }
+
+      // If any items failed, apply exponential backoff (2s -> 4s -> 8s -> 16s -> max 60s)
+      if (failed > 0) {
+        this.consecutiveFailures = Math.min(6, (this.consecutiveFailures || 0) + 1);
+        const backoffMs = Math.min(60000, Math.pow(2, this.consecutiveFailures) * 1000);
+        this.scheduleSync(backoffMs);
       }
     } catch (globalErr) {
       console.error('[OfflineSync] Global sync loop error:', globalErr);
+      this.consecutiveFailures = Math.min(6, (this.consecutiveFailures || 0) + 1);
+      const backoffMs = Math.min(60000, Math.pow(2, this.consecutiveFailures) * 1000);
+      this.scheduleSync(backoffMs);
     } finally {
       this.isSyncing = false;
       this.syncProgress = null;

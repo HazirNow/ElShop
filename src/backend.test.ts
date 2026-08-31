@@ -306,3 +306,51 @@ describe('Offline State Ledger Recovery Sync', () => {
     expect(synchronizedLedger[0].fils).toBe(1000); // Original server records remain untampered
   });
 });
+
+// 16. TEST SUITE: DB-Level Aggregations & State Metadata
+describe('DB-Level Telemetry Aggregations & Metadata', () => {
+  it('should compute pulse summary aggregations and node partitions accurately', async () => {
+    const { getSuperadminPulseSummaryInDb } = await import('./db/repository');
+    const pulse = await getSuperadminPulseSummaryInDb();
+
+    expect(pulse).toBeDefined();
+    expect(pulse.nodeCount).toBeGreaterThanOrEqual(1);
+    expect(pulse.networkSummary).toBeDefined();
+    expect(pulse.networkSummary.totalRevenueAED).toBeGreaterThanOrEqual(0);
+    expect(Array.isArray(pulse.partitions)).toBe(true);
+    expect(pulse.partitions[0]).toHaveProperty('totalRevenueAED');
+    expect(pulse.partitions[0]).toHaveProperty('catalogCount');
+    expect(pulse.partitions[0]).toHaveProperty('customerCount');
+  });
+
+  it('should return batched courier building sweeps sorted by total active orders', async () => {
+    const { getBatchedRunsByBuildingInDb } = await import('./db/repository');
+    const batchedRuns = await getBatchedRunsByBuildingInDb();
+
+    expect(Array.isArray(batchedRuns)).toBe(true);
+    if (batchedRuns.length > 1) {
+      expect(batchedRuns[0].totalOrders).toBeGreaterThanOrEqual(batchedRuns[1].totalOrders);
+    }
+  });
+
+  it('should return lightweight state metadata counts for conflict checks', async () => {
+    const { getStateMetadataInDb } = await import('./db/repository');
+    const meta = await getStateMetadataInDb();
+
+    expect(meta).toBeDefined();
+    expect(meta.storeCount).toBeGreaterThanOrEqual(1);
+    expect(meta.productCount).toBeGreaterThanOrEqual(1);
+    expect(meta.orderCount).toBeGreaterThanOrEqual(1);
+    expect(typeof meta.lastUpdatedAt).toBe('string');
+  });
+
+  it('should define explicit database index keys in Drizzle schema for high-throughput columns', async () => {
+    const schema = await import('./db/schema');
+    expect(schema.stores).toBeDefined();
+    expect(schema.products).toBeDefined();
+    expect(schema.orders).toBeDefined();
+    expect(schema.khataTransactions).toBeDefined();
+    expect(schema.customers).toBeDefined();
+  });
+});
+

@@ -1,4 +1,4 @@
-import { pgTable, text, integer, doublePrecision, boolean, timestamp, jsonb, serial } from 'drizzle-orm/pg-core';
+import { pgTable, text, integer, doublePrecision, boolean, timestamp, jsonb, serial, index } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 // Stores table
@@ -29,7 +29,10 @@ export const stores = pgTable('stores', {
   adminExplicitOverrideAt: text('admin_explicit_override_at'),
   lastReminderSentAt: text('last_reminder_sent_at'),
   reminderCount: integer('reminder_count').default(0),
-});
+}, (table) => ({
+  areaIdx: index('stores_area_idx').on(table.area),
+  servicePausedIdx: index('stores_service_paused_idx').on(table.servicePaused),
+}));
 
 // Products table
 export const products = pgTable('products', {
@@ -53,7 +56,10 @@ export const products = pgTable('products', {
   expiryDate: text('expiry_date'),
   barcode: text('barcode'),
   sku: text('sku'),
-});
+}, (table) => ({
+  storeCategoryIdx: index('products_store_category_idx').on(table.storeId, table.category),
+  storeInStockIdx: index('products_store_in_stock_idx').on(table.storeId, table.inStock),
+}));
 
 // Customers table
 export const customers = pgTable('customers', {
@@ -64,7 +70,10 @@ export const customers = pgTable('customers', {
   unit: text('unit').notNull(),
   isKhataPreApproved: boolean('is_khata_pre_approved').default(false),
   creditLimit: doublePrecision('credit_limit').default(500),
-});
+}, (table) => ({
+  phoneIdx: index('customers_phone_idx').on(table.phone),
+  buildingIdx: index('customers_building_idx').on(table.building),
+}));
 
 // Orders table
 export const orders = pgTable('orders', {
@@ -89,7 +98,12 @@ export const orders = pgTable('orders', {
   packedItems: jsonb('packed_items').notNull().default([]), // string[]
   paidAmount: doublePrecision('paid_amount').default(0),
   chatMessages: jsonb('chat_messages').notNull().default([]), // ChatMessage[]
-});
+}, (table) => ({
+  storeStatusIdx: index('orders_store_status_idx').on(table.storeId, table.status),
+  buildingStatusIdx: index('orders_building_status_idx').on(table.building, table.status),
+  createdAtIdx: index('orders_created_at_idx').on(table.createdAt),
+  customerOrdersIdx: index('orders_customer_id_idx').on(table.customerId),
+}));
 
 // Authoritative Khata Transactions Ledger
 export const khataTransactions = pgTable('khata_transactions', {
@@ -102,7 +116,10 @@ export const khataTransactions = pgTable('khata_transactions', {
   amount: doublePrecision('amount').notNull(),
   timestamp: text('timestamp').notNull(),
   note: text('note'),
-});
+}, (table) => ({
+  customerKhataIdx: index('khata_transactions_customer_id_idx').on(table.customerId),
+  storeKhataIdx: index('khata_transactions_store_id_idx').on(table.storeId),
+}));
 
 // Riders table
 export const riders = pgTable('riders', {

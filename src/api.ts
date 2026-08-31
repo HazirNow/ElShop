@@ -53,6 +53,19 @@ export async function fetchState(): Promise<AppState> {
   return getCachedState();
 }
 
+export async function fetchStateMetadata(storeId?: string): Promise<{ storeCount: number; productCount: number; orderCount: number; lastUpdatedAt: string } | null> {
+  try {
+    const url = storeId ? `/api/state/metadata?storeId=${encodeURIComponent(storeId)}` : '/api/state/metadata';
+    const res = await safeFetch(url, undefined, 2000);
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (err) {
+    // Gracefully fallback
+  }
+  return null;
+}
+
 export async function resetDatabase(): Promise<AppState> {
   try {
     const res = await safeFetch('/api/reset', { method: 'POST' });

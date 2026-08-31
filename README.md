@@ -273,6 +273,17 @@ npx vitest run --no-cache
 
 ---
 
+## ⚡ High-Throughput Architecture & Resilient Sync
+
+ElShop features production-hardened optimizations designed for reliable high-concurrency operations:
+- **Compound Database Indexes**: Drizzle ORM tables declare explicit compound indexes on `orders(store_id, status)`, `orders(building, status)`, `products(store_id, category)`, and `khata_transactions(customer_id)`.
+- **Server-Level SQL Aggregations**: `/api/superadmin/global-pulse` and `/api/rider/batched-tasks` leverage SQL `GROUP BY`, `COUNT`, and `SUM` queries rather than performing in-memory reductions over full-tenant state trees.
+- **Fail-Closed Administrative Security**: `/api/superadmin/*` routes enforce strict secret checks (`SUPERADMIN_SECRET`), IP-based rate limiting (30 reqs/min), and audit logging.
+- **Event-Driven Offline Sync & Quarantine**: Client mutations enqueue optimistically to IndexedDB (Dexie) with exponential backoff on retry failures. Items exceeding 5 consecutive failures are quarantined into `'conflict'` review status to prevent infinite sync loops.
+- **Lightweight State Metadata**: Clients check `/api/state/metadata` to verify updated timestamps and entity counts before fetching heavy state.
+
+---
+
 ## 🔑 Demo Access Credentials
 
 | Role | Access Route | Default Passkey / PIN |

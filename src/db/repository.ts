@@ -1822,6 +1822,295 @@ export async function updateAdminConfigInDb(breakEvenOrdersThreshold: number): P
   return { breakEvenOrdersThreshold: val };
 }
 
+export interface PulsePartition {
+  id: string;
+  name: string;
+  area: string;
+  status: 'active' | 'paused';
+  paymentStatus: string;
+  subscriptionTier: number;
+  totalRevenueAED: number;
+  totalOrders: number;
+  deliveredOrders: number;
+  activeOrders: number;
+  catalogCount: number;
+  customerCount: number;
+}
+
+export interface SuperadminPulseSummary {
+  timestamp: string;
+  nodeCount: number;
+  networkSummary: {
+    totalRevenueAED: number;
+    totalOrders: number;
+    deliveredOrders: number;
+    activeStores: number;
+    pausedStores: number;
+  };
+  partitions: PulsePartition[];
+}
+
+/**
+ * DB-Level Superadmin Pulse Summary Aggregations
+ * Uses SQL COUNT, SUM, and GROUP BY to avoid loading full entities into Node memory
+ */
+export async function getSuperadminPulseSummaryInDb(): Promise<SuperadminPulseSummary> {
+  const pgOk = await isPostgresAvailable();
+
+  if (!pgOk) {
+    memoryStore.initIfEmpty();
+    const partitions: PulsePartition[] = memoryStore.stores.map((store) => {
+      const storeOrders = memoryStore.orders.filter((o) => o.storeId === store.id);
+      const storeProducts = memoryStore.products.filter((p) => p.storeId === store.id);
+      const storeCustomerIds = new Set(storeOrders.map((o) => o.customerId));
+      const deliveredOrders = storeOrders.filter((o) => o.status === 'delivered');
+      const storeRevenue = deliveredOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+      const activeOrders = storeOrders.filter((o) => o.status === 'placed' || o.status === 'packing' || o.status === 'out_for_delivery').length;
+
+      return {
+        id: store.id,
+        name: store.name,
+        area: store.area,
+        status: store.servicePaused ? 'paused' : 'active',
+        paymentStatus: store.paymentStatus || 'paid',
+        subscriptionTier: store.subscriptionTier || (store.subscriptionFee >= 899 ? 3 : 1),
+        totalRevenueAED: Number(storeRevenue.toFixed(2)),
+        totalOrders: storeOrders.length,
+        deliveredOrders: deliveredOrders.length,
+        activeOrders,
+        catalogCount: storeProducts.length,
+        customerCount: storeCustomerIds.size,
+      };
+    });
+
+    const totalRevenue = partitions.reduce((sum, p) => sum + p.totalRevenueAED, 0);
+    const totalOrdersCount = memoryStore.orders.length;
+    const totalDelivered = memoryStore.orders.filter((o) => o.status === 'delivered').length;
+
+    return {
+      timestamp: new Date().toISOString(),
+      nodeCount: partitions.length,
+      networkSummary: {
+        totalRevenueAED: Number(totalRevenue.toFixed(2)),
+        totalOrders: totalOrdersCount,
+        deliveredOrders: totalDelivered,
+        activeStores: partitions.filter((p) => p.status === 'active').length,
+        pausedStores: partitions.filter((p) => p.status === 'paused').length,
+      },
+      partitions,
+    };
+  }
+
+  return withDbRetry(async () => {
+    // 1. Fetch stores
+    const allStores = await db.select().from(stores);
+
+    // 2. Aggregate orders per store via GROUP BY
+    const orderAggregates = await db
+      .select({
+        storeId: orders.storeId,
+        totalOrders: sql<number>`COUNT(*)`,
+        deliveredOrders: sql<number>`COUNT(CASE WHEN ${orders.status} = 'delivered' THEN 1 END)`,
+        activeOrders: sql<number>`COUNT(CASE WHEN ${orders.status} IN ('placed', 'packing', 'out_for_delivery') THEN 1 END)`,
+        totalRevenue: sql<number>`COALESCE(SUM(CASE WHEN ${orders.status} = 'delivered' THEN ${orders.total} ELSE 0 END), 0)`,
+        uniqueCustomers: sql<number>`COUNT(DISTINCT ${orders.customerId})`,
+      })
+      .from(orders)
+      .groupBy(orders.storeId);
+
+    const orderAggMap = new Map(orderAggregates.map((row) => [row.storeId, row]));
+
+    // 3. Aggregate product catalog count per store via GROUP BY
+    const productCounts = await db
+      .select({
+        storeId: products.storeId,
+        catalogCount: sql<number>`COUNT(*)`,
+      })
+      .from(products)
+      .groupBy(products.storeId);
+
+    const prodCountMap = new Map(productCounts.map((row) => [row.storeId, Number(row.catalogCount)]));
+
+    let netDelivered = 0;
+    let netTotalOrders = 0;
+    let netRevenue = 0;
+
+    const partitions: PulsePartition[] = allStores.map((s) => {
+      const agg = orderAggMap.get(s.id);
+      const totalO = agg ? Number(agg.totalOrders) : 0;
+      const delO = agg ? Number(agg.deliveredOrders) : 0;
+      const actO = agg ? Number(agg.activeOrders) : 0;
+      const rev = agg ? Number(agg.totalRevenue) : 0;
+      const custCount = agg ? Number(agg.uniqueCustomers) : 0;
+      const catCount = prodCountMap.get(s.id) || 0;
+
+      netTotalOrders += totalO;
+      netDelivered += delO;
+      netRevenue += rev;
+
+      return {
+        id: s.id,
+        name: s.name,
+        area: s.area,
+        status: s.servicePaused ? 'paused' : 'active',
+        paymentStatus: s.paymentStatus || 'paid',
+        subscriptionTier: (s.subscriptionFee && s.subscriptionFee >= 899) ? 3 : 1,
+        totalRevenueAED: Number(rev.toFixed(2)),
+        totalOrders: totalO,
+        deliveredOrders: delO,
+        activeOrders: actO,
+        catalogCount: catCount,
+        customerCount: custCount,
+      };
+    });
+
+    return {
+      timestamp: new Date().toISOString(),
+      nodeCount: partitions.length,
+      networkSummary: {
+        totalRevenueAED: Number(netRevenue.toFixed(2)),
+        totalOrders: netTotalOrders,
+        deliveredOrders: netDelivered,
+        activeStores: partitions.filter((p) => p.status === 'active').length,
+        pausedStores: partitions.filter((p) => p.status === 'paused').length,
+      },
+      partitions,
+    };
+  });
+}
+
+export interface BatchedBuildingRun {
+  buildingName: string;
+  totalOrders: number;
+  estimatedElevatorTimeMins: number;
+  orders: Order[];
+}
+
+/**
+ * DB-Level Batched Runs By Building for Couriers
+ */
+export async function getBatchedRunsByBuildingInDb(storeFilterId?: string): Promise<BatchedBuildingRun[]> {
+  const pgOk = await isPostgresAvailable();
+
+  if (!pgOk) {
+    memoryStore.initIfEmpty();
+    let activeOrders = memoryStore.orders.filter((o) =>
+      o.status === 'placed' || o.status === 'packing' || o.status === 'out_for_delivery'
+    );
+    if (storeFilterId) {
+      activeOrders = activeOrders.filter((o) => o.storeId === storeFilterId);
+    }
+
+    const grouped: Record<string, BatchedBuildingRun> = {};
+    for (const order of activeOrders) {
+      const buildingKey = order.building || 'General Area';
+      if (!grouped[buildingKey]) {
+        grouped[buildingKey] = {
+          buildingName: buildingKey,
+          totalOrders: 0,
+          estimatedElevatorTimeMins: 0,
+          orders: [],
+        };
+      }
+      grouped[buildingKey].orders.push(order);
+      grouped[buildingKey].totalOrders += 1;
+      grouped[buildingKey].estimatedElevatorTimeMins = grouped[buildingKey].totalOrders * 3;
+    }
+
+    return Object.values(grouped).sort((a, b) => b.totalOrders - a.totalOrders);
+  }
+
+  return withDbRetry(async () => {
+    let query = db
+      .select()
+      .from(orders)
+      .where(
+        sql`${orders.status} IN ('placed', 'packing', 'out_for_delivery') ${
+          storeFilterId ? sql`AND ${orders.storeId} = ${storeFilterId}` : sql``
+        }`
+      );
+
+    const activeOrderRows = await query;
+    const grouped: Record<string, BatchedBuildingRun> = {};
+
+    for (const row of activeOrderRows) {
+      const order = row as unknown as Order;
+      const buildingKey = order.building || 'General Area';
+      if (!grouped[buildingKey]) {
+        grouped[buildingKey] = {
+          buildingName: buildingKey,
+          totalOrders: 0,
+          estimatedElevatorTimeMins: 0,
+          orders: [],
+        };
+      }
+      grouped[buildingKey].orders.push(order);
+      grouped[buildingKey].totalOrders += 1;
+      grouped[buildingKey].estimatedElevatorTimeMins = grouped[buildingKey].totalOrders * 3;
+    }
+
+    return Object.values(grouped).sort((a, b) => b.totalOrders - a.totalOrders);
+  });
+}
+
+export interface StateMetadataSummary {
+  storeCount: number;
+  productCount: number;
+  orderCount: number;
+  lastUpdatedAt: string;
+}
+
+/**
+ * Lightweight State Metadata for minimal bandwidth sync/conflict checks
+ */
+export async function getStateMetadataInDb(storeFilterId?: string): Promise<StateMetadataSummary> {
+  const pgOk = await isPostgresAvailable();
+
+  if (!pgOk) {
+    memoryStore.initIfEmpty();
+    const pCount = storeFilterId
+      ? memoryStore.products.filter((p) => p.storeId === storeFilterId).length
+      : memoryStore.products.length;
+    const oCount = storeFilterId
+      ? memoryStore.orders.filter((o) => o.storeId === storeFilterId).length
+      : memoryStore.orders.length;
+    const sCount = storeFilterId
+      ? memoryStore.stores.filter((s) => s.id === storeFilterId).length
+      : memoryStore.stores.length;
+
+    return {
+      storeCount: sCount,
+      productCount: pCount,
+      orderCount: oCount,
+      lastUpdatedAt: new Date().toISOString(),
+    };
+  }
+
+  return withDbRetry(async () => {
+    const prodCountRes = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(products)
+      .where(storeFilterId ? eq(products.storeId, storeFilterId) : sql`1=1`);
+
+    const orderCountRes = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(orders)
+      .where(storeFilterId ? eq(orders.storeId, storeFilterId) : sql`1=1`);
+
+    const storeCountRes = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(stores)
+      .where(storeFilterId ? eq(stores.id, storeFilterId) : sql`1=1`);
+
+    return {
+      storeCount: Number(storeCountRes[0]?.count || 0),
+      productCount: Number(prodCountRes[0]?.count || 0),
+      orderCount: Number(orderCountRes[0]?.count || 0),
+      lastUpdatedAt: new Date().toISOString(),
+    };
+  });
+}
+
 /**
  * Reset Database / Memory Store to Seed State
  */

@@ -23,8 +23,38 @@ import {
   seedDatabaseIfEmpty,
   getCustomerKhataBalanceFromDb,
   isDatabaseConnected,
+  getSuperadminPulseSummaryInDb,
+  getBatchedRunsByBuildingInDb,
+  getStateMetadataInDb,
 } from './src/db/repository.ts';
 import { Store, Order, Product, Settlement } from './src/types.ts';
+
+// In-Memory Telemetry Cache for Pulse
+let pulseCache: { timestamp: number; data: any } | null = null;
+const PULSE_CACHE_TTL_MS = 15000; // 15s TTL
+
+// In-Memory Rate Limiting for Administrative Endpoints
+const adminRateLimitMap = new Map<string, { count: number; resetTime: number }>();
+const ADMIN_RATE_LIMIT_WINDOW_MS = 60000; // 1 minute
+const ADMIN_MAX_REQUESTS_PER_WINDOW = 30;
+
+function checkAdminRateLimit(ip: string): { allowed: boolean; remaining: number; retryAfter?: number } {
+  const now = Date.now();
+  const record = adminRateLimitMap.get(ip);
+
+  if (!record || now > record.resetTime) {
+    adminRateLimitMap.set(ip, { count: 1, resetTime: now + ADMIN_RATE_LIMIT_WINDOW_MS });
+    return { allowed: true, remaining: ADMIN_MAX_REQUESTS_PER_WINDOW - 1 };
+  }
+
+  if (record.count >= ADMIN_MAX_REQUESTS_PER_WINDOW) {
+    const retryAfter = Math.ceil((record.resetTime - now) / 1000);
+    return { allowed: false, remaining: 0, retryAfter };
+  }
+
+  record.count += 1;
+  return { allowed: true, remaining: ADMIN_MAX_REQUESTS_PER_WINDOW - record.count };
+}
 
 async function startServer() {
   const app = express();
@@ -469,99 +499,90 @@ async function startServer() {
     }
   });
 
-  // Cross-tenant Superadmin Global Pulse Telemetry Endpoint
-  app.get('/api/superadmin/global-pulse', async (req, res) => {
+  // Lightweight Metadata endpoint for quick sync and conflict checks
+  app.get('/api/state/metadata', async (req, res) => {
     try {
-      const adminSecret = process.env.SUPERADMIN_SECRET || 'HazirNow_Pilot_Secret_2026';
+      const { storeId } = req.query as { storeId?: string };
+      const metadata = await getStateMetadataInDb(storeId);
+      res.json(metadata);
+    } catch (error: any) {
+      console.error('[API /api/state/metadata] Error:', error);
+      res.status(500).json({ error: error.message || 'Failed to load state metadata' });
+    }
+  });
+
+  // Cross-tenant Superadmin Global Pulse Telemetry Endpoint (DB-Level Aggregations + In-Memory TTL Cache)
+  app.get('/api/superadmin/global-pulse', async (req, res) => {
+    const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.socket.remoteAddress || '127.0.0.1';
+
+    // 1. Rate Limiting Check
+    const rateLimit = checkAdminRateLimit(clientIp);
+    res.setHeader('X-RateLimit-Remaining', rateLimit.remaining.toString());
+    if (!rateLimit.allowed) {
+      console.warn(`[Security Audit] Rate limit exceeded on /api/superadmin/global-pulse from IP: ${clientIp}`);
+      return res.status(429).json({
+        error: 'Too Many Requests: Superadmin telemetry rate limit exceeded. Please try again later.',
+        retryAfter: rateLimit.retryAfter,
+      });
+    }
+
+    try {
+      const isProduction = process.env.NODE_ENV === 'production';
+      const configuredSecret = process.env.SUPERADMIN_SECRET;
+
+      // Fail-closed in production if no secret is configured in environment
+      if (isProduction && !configuredSecret) {
+        console.error('[Security Error] Production deployment missing required SUPERADMIN_SECRET environment variable.');
+        return res.status(500).json({
+          error: 'Server Misconfigured: Administrative secret is required in production mode.',
+        });
+      }
+
+      const adminSecret = configuredSecret || 'HazirNow_Pilot_Secret_2026';
       const providedSecret = req.headers['x-elshop-admin-secret'];
 
-      if (!providedSecret || (providedSecret !== adminSecret && providedSecret !== 'elshop-superadmin-secret-key-2026')) {
+      const isValid = providedSecret && (
+        providedSecret === adminSecret ||
+        (!isProduction && providedSecret === 'elshop-superadmin-secret-key-2026')
+      );
+
+      if (!isValid) {
+        console.warn(`[Security Audit] Unauthorized superadmin access attempt from IP: ${clientIp}`);
         return res.status(401).json({
           error: 'Unauthorized: Invalid or missing x-elshop-admin-secret signature',
         });
       }
 
-      const fullState = await getAppStateFromDb();
-      const partitions = fullState.stores.map((store) => {
-        const storeOrders = fullState.orders.filter((o) => o.storeId === store.id);
-        const storeProducts = fullState.products.filter((p) => p.storeId === store.id);
-        const storeCustomerIds = new Set(storeOrders.map((o) => o.customerId));
-        const deliveredOrders = storeOrders.filter((o) => o.status === 'delivered');
-        const storeRevenue = deliveredOrders.reduce((sum, o) => sum + (o.total || 0), 0);
-        const activeOrders = storeOrders.filter((o) => o.status === 'placed' || o.status === 'packing' || o.status === 'out_for_delivery').length;
+      // 2. Check TTL Cache
+      const now = Date.now();
+      if (pulseCache && now - pulseCache.timestamp < PULSE_CACHE_TTL_MS) {
+        return res.json(pulseCache.data);
+      }
 
-        return {
-          id: store.id,
-          name: store.name,
-          area: store.area,
-          status: store.servicePaused ? 'paused' : 'active',
-          paymentStatus: store.paymentStatus || 'paid',
-          subscriptionTier: store.subscriptionTier || (store.subscriptionFee >= 899 ? 3 : 1),
-          totalRevenueAED: Number(storeRevenue.toFixed(2)),
-          totalOrders: storeOrders.length,
-          deliveredOrders: deliveredOrders.length,
-          activeOrders,
-          catalogCount: storeProducts.length,
-          customerCount: storeCustomerIds.size,
-        };
-      });
+      const pulseData = await getSuperadminPulseSummaryInDb();
+      pulseCache = {
+        timestamp: now,
+        data: pulseData,
+      };
 
-      const totalRevenue = partitions.reduce((sum, p) => sum + p.totalRevenueAED, 0);
-      const totalOrdersCount = fullState.orders.length;
-      const totalDelivered = fullState.orders.filter((o) => o.status === 'delivered').length;
-
-      res.json({
-        timestamp: new Date().toISOString(),
-        nodeCount: partitions.length,
-        networkSummary: {
-          totalRevenueAED: Number(totalRevenue.toFixed(2)),
-          totalOrders: totalOrdersCount,
-          deliveredOrders: totalDelivered,
-          activeStores: partitions.filter((p) => p.status === 'active').length,
-          pausedStores: partitions.filter((p) => p.status === 'paused').length,
-        },
-        partitions,
-      });
+      res.json(pulseData);
     } catch (error: any) {
       console.error('[API /api/superadmin/global-pulse] Error:', error);
       res.status(500).json({ error: error.message || 'Failed to retrieve superadmin global pulse' });
     }
   });
 
-  // [PILOT MODULE] Courier Order Batching Engine - Grouping orders by targeted pilot building strings
+  // [PILOT MODULE] Courier Order Batching Engine - DB-Level grouping by targeted pilot building strings
   app.get('/api/rider/batched-tasks', async (req, res) => {
     try {
-      const fullState = await getAppStateFromDb();
-      const activeOrders = fullState.orders.filter((o) => o.status === 'placed' || o.status === 'packing' || o.status === 'out_for_delivery');
-
-      if (activeOrders.length === 0) {
-        return res.json({ success: true, batchedRuns: [] });
-      }
-
-      // Reduce and group orders by matching target building names
-      const groupedByBuilding = activeOrders.reduce((acc: any, order: any) => {
-        const buildingKey = order.address?.building || 'General Area';
-        if (!acc[buildingKey]) {
-          acc[buildingKey] = {
-            buildingName: buildingKey,
-            totalOrders: 0,
-            estimatedElevatorTimeMins: 0,
-            orders: []
-          };
-        }
-        acc[buildingKey].orders.push(order);
-        acc[buildingKey].totalOrders += 1;
-        acc[buildingKey].estimatedElevatorTimeMins = acc[buildingKey].totalOrders * 3;
-        return acc;
-      }, {});
-
-      const batchedRuns = Object.values(groupedByBuilding).sort((a: any, b: any) => b.totalOrders - a.totalOrders);
+      const { storeId } = req.query as { storeId?: string };
+      const batchedRuns = await getBatchedRunsByBuildingInDb(storeId);
 
       res.json({
         success: true,
         timestamp: new Date().toISOString(),
         totalBatchedRuns: batchedRuns.length,
-        data: batchedRuns
+        data: batchedRuns,
       });
     } catch (err: any) {
       console.error('[API /api/rider/batched-tasks] Error:', err);
