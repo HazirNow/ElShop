@@ -9,6 +9,7 @@ import {
   updateCustomer as apiUpdateCustomer,
   updateStore as apiUpdateStore,
   fetchState,
+  fetchStateMetadata,
   saveCachedState,
   getCachedState
 } from '../api';
@@ -382,12 +383,12 @@ class OfflineSyncManager {
         return { processed: 0, succeeded: 0, conflicts: 0, failed: 0 };
       }
 
-      // Fetch fresh server state once to perform optimistic timestamp conflict checks
-      let freshServerState: any = null;
+      // Fetch fresh server metadata once to perform optimistic timestamp conflict checks
+      let freshServerMetadata: { storeCount: number; productCount: number; orderCount: number; lastUpdatedAt: string } | null = null;
       try {
-        freshServerState = await fetchState();
+        freshServerMetadata = await fetchStateMetadata();
       } catch (err) {
-        console.warn('[OfflineSync] Server fetch before sync had issues, proceeding with caution:', err);
+        console.warn('[OfflineSync] Server metadata fetch before sync had issues, proceeding with caution:', err);
       }
 
       for (let i = 0; i < totalItems; i++) {
@@ -402,8 +403,8 @@ class OfflineSyncManager {
         this.notify();
 
         try {
-          // 1. Conflict Detection Check
-          const conflict = this.detectConflict(item, freshServerState);
+          // 1. Conflict Detection Check against server entity updatedAt timestamps
+          const conflict = this.detectConflict(item, freshServerMetadata);
           if (conflict) {
             conflicts++;
             await offlineDb.syncQueue.update(item.id!, {
@@ -491,48 +492,56 @@ class OfflineSyncManager {
 
   /**
    * Conflict Detection Engine:
-   * Checks if the server's entity timestamp is newer than the queuedAt timestamp
+   * Compares entity updatedAt timestamps to check if server was modified after the offline change was queued.
    */
-  private detectConflict(item: SyncQueueItem, serverState: any): any | null {
-    if (!serverState) return null;
+  private detectConflict(
+    item: SyncQueueItem, 
+    serverMetadata: { lastUpdatedAt?: string; storeCount?: number; productCount?: number; orderCount?: number } | any
+  ): any | null {
+    if (!serverMetadata) return null;
 
     const queuedAt = new Date(item.timestamp).getTime();
+    const serverTimestampStr = serverMetadata.lastUpdatedAt || serverMetadata.updatedAt;
 
     if (item.actionType === 'UPDATE_PRODUCT') {
-      const serverProduct = serverState.products?.find((p: Product) => p.id === item.payload.id);
-      if (serverProduct) {
-        // If server product price or stock was modified after we queued our offline change
-        const serverUpdatedAt = serverProduct.updatedAt 
-          ? new Date(serverProduct.updatedAt).getTime()
-          : null;
+      const serverProduct = serverMetadata.products?.find((p: Product) => p.id === item.payload?.id);
+      const serverUpdatedAtStr = serverProduct?.updatedAt || serverTimestampStr;
 
-        if (serverUpdatedAt && serverUpdatedAt > queuedAt) {
+      if (serverUpdatedAtStr) {
+        const serverUpdatedAt = new Date(serverUpdatedAtStr).getTime();
+        if (!isNaN(serverUpdatedAt) && !isNaN(queuedAt) && serverUpdatedAt > queuedAt) {
+          const prodName = serverProduct?.name || item.payload?.data?.name || item.payload?.name || `Product #${item.payload?.id || ''}`;
           return {
-            serverUpdatedAt: serverProduct.updatedAt,
+            serverUpdatedAt: serverUpdatedAtStr,
             localQueuedAt: item.timestamp,
-            serverState: {
-              name: serverProduct.name,
-              price: serverProduct.price,
-              stock: serverProduct.stock,
-              inStock: serverProduct.inStock
-            },
-            localState: item.payload.data,
-            reason: `Product "${serverProduct.name}" was modified on cloud at ${new Date(serverProduct.updatedAt).toLocaleTimeString()} after offline change was queued at ${new Date(item.timestamp).toLocaleTimeString()}`
+            serverState: serverProduct
+              ? {
+                  name: serverProduct.name,
+                  price: serverProduct.price,
+                  stock: serverProduct.stock,
+                  inStock: serverProduct.inStock,
+                }
+              : { lastUpdatedAt: serverUpdatedAtStr },
+            localState: item.payload?.data || item.payload,
+            reason: `Product "${prodName}" was modified on cloud at ${new Date(serverUpdatedAt).toLocaleTimeString()} after offline change was queued at ${new Date(item.timestamp).toLocaleTimeString()}`,
           };
         }
       }
     } else if (item.actionType === 'UPDATE_ORDER') {
-      const serverOrder = serverState.orders?.find((o: Order) => o.id === item.payload.id);
-      if (serverOrder) {
-        // If server order status changed (e.g. cancelled by customer or delivered by another rider)
-        const serverUpdatedAt = serverOrder.updatedAt ? new Date(serverOrder.updatedAt).getTime() : null;
-        if (serverUpdatedAt && serverUpdatedAt > queuedAt && serverOrder.status !== item.payload.data?.status) {
+      const serverOrder = serverMetadata.orders?.find((o: Order) => o.id === item.payload?.id);
+      const serverUpdatedAtStr = serverOrder?.updatedAt || serverTimestampStr;
+
+      if (serverUpdatedAtStr) {
+        const serverUpdatedAt = new Date(serverUpdatedAtStr).getTime();
+        if (!isNaN(serverUpdatedAt) && !isNaN(queuedAt) && serverUpdatedAt > queuedAt) {
+          const orderId = serverOrder?.id || item.payload?.id || 'unknown';
+          const targetStatus = item.payload?.data?.status || item.payload?.status || 'updated';
           return {
-            serverUpdatedAt: serverOrder.updatedAt,
+            serverUpdatedAt: serverUpdatedAtStr,
             localQueuedAt: item.timestamp,
-            serverState: { status: serverOrder.status },
-            localState: { status: item.payload.data?.status },
-            reason: `Order #${serverOrder.id} status was set to "${serverOrder.status}" on cloud while offline status set to "${item.payload.data?.status}"`
+            serverState: serverOrder ? { status: serverOrder.status } : { lastUpdatedAt: serverUpdatedAtStr },
+            localState: item.payload?.data || item.payload,
+            reason: `Order #${orderId} was modified on cloud at ${new Date(serverUpdatedAt).toLocaleTimeString()} after offline change was queued at ${new Date(item.timestamp).toLocaleTimeString()} setting status to "${targetStatus}"`,
           };
         }
       }

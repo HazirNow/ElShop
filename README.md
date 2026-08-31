@@ -282,6 +282,28 @@ ElShop features production-hardened optimizations designed for reliable high-con
 - **Event-Driven Offline Sync & Quarantine**: Client mutations enqueue optimistically to IndexedDB (Dexie) with exponential backoff on retry failures. Items exceeding 5 consecutive failures are quarantined into `'conflict'` review status to prevent infinite sync loops.
 - **Lightweight State Metadata**: Clients check `/api/state/metadata` to verify updated timestamps and entity counts before fetching heavy state.
 
+### 🛠️ Production Database Migration Runbook
+
+1. **Staging / Production Concurrent Index Execution**:
+   Run the zero-downtime concurrent SQL script (without an explicit transaction block) to build indexes without table locks:
+   ```bash
+   psql -h <POSTGRES_HOST> -U <USER> -d <DB_NAME> -f drizzle/0001_add_performance_indexes_concurrent.sql
+   ```
+
+2. **Query Plan Verification**:
+   Verify that PostgreSQL utilizes the new indexes via `EXPLAIN ANALYZE`:
+   ```sql
+   EXPLAIN ANALYZE SELECT store_id, status, count(*) FROM orders GROUP BY store_id, status;
+   ```
+
+3. **Rollback Procedure**:
+   Because indexes are additive, reverting them is safe and zero-downtime:
+   ```sql
+   DROP INDEX CONCURRENTLY IF EXISTS orders_store_status_idx;
+   DROP INDEX CONCURRENTLY IF EXISTS khata_transactions_customer_id_idx;
+   DROP INDEX CONCURRENTLY IF EXISTS products_store_category_idx;
+   ```
+
 ---
 
 ## 🔑 Demo Access Credentials
