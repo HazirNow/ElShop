@@ -31,15 +31,29 @@ import { Store, Order, Product, Settlement } from './src/types.ts';
 
 // In-Memory Telemetry Cache for Pulse
 let pulseCache: { timestamp: number; data: any } | null = null;
-const PULSE_CACHE_TTL_MS = 15000; // 15s TTL
+const PULSE_CACHE_TTL_MS = process.env.PULSE_CACHE_TTL_MS 
+  ? parseInt(process.env.PULSE_CACHE_TTL_MS, 10) 
+  : 15000; // 15s TTL default
 
 // In-Memory Rate Limiting for Administrative Endpoints
 const adminRateLimitMap = new Map<string, { count: number; resetTime: number }>();
 const ADMIN_RATE_LIMIT_WINDOW_MS = 60000; // 1 minute
 const ADMIN_MAX_REQUESTS_PER_WINDOW = 30;
 
+function pruneExpiredAdminRateLimits(now: number) {
+  if (adminRateLimitMap.size > 50) {
+    for (const [ip, rec] of adminRateLimitMap.entries()) {
+      if (now > rec.resetTime) {
+        adminRateLimitMap.delete(ip);
+      }
+    }
+  }
+}
+
 function checkAdminRateLimit(ip: string): { allowed: boolean; remaining: number; retryAfter?: number } {
   const now = Date.now();
+  pruneExpiredAdminRateLimits(now);
+
   const record = adminRateLimitMap.get(ip);
 
   if (!record || now > record.resetTime) {
