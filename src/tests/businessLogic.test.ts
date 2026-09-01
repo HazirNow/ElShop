@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { getTierAccess } from '../hooks/useTierAccess';
 import { Store } from '../types';
+import { offlineSyncManager } from '../lib/offlineSyncManager';
 
 const processTenantRequest = (tenantId: string | null) => {
   if (!tenantId) throw new Error('ACCESS_DENIED');
@@ -77,4 +78,39 @@ describe('ElShop Core Production Business Logic', () => {
     expect(grossProfit).toBeCloseTo(8.40, 2);
     expect(grossMarginPct).toBeCloseTo(20.74, 1);
   });
+
+  it('should format and emit valid structured JSON logs for offline sync loop summaries', () => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    const summaryResult = offlineSyncManager.logStructuredSummary({
+      processed: 5,
+      succeeded: 4,
+      conflicted: 1,
+      failed: 0,
+      durationMs: 45,
+      event: 'OFFLINE_SYNC_LOOP_SUMMARY',
+      level: 'info'
+    });
+
+    expect(logSpy).toHaveBeenCalled();
+    const lastLogCall = logSpy.mock.calls[logSpy.mock.calls.length - 1][0];
+    const parsed = JSON.parse(lastLogCall);
+
+    expect(parsed.event).toBe('OFFLINE_SYNC_LOOP_SUMMARY');
+    expect(parsed.level).toBe('info');
+    expect(parsed.processed).toBe(5);
+    expect(parsed.succeeded).toBe(4);
+    expect(parsed.conflicted).toBe(1);
+    expect(parsed.failed).toBe(0);
+    expect(parsed.durationMs).toBe(45);
+    expect(parsed.timestamp).toBeDefined();
+
+    expect(summaryResult.processed).toBe(5);
+    expect(summaryResult.succeeded).toBe(4);
+    expect(summaryResult.conflicted).toBe(1);
+    expect(summaryResult.failed).toBe(0);
+
+    logSpy.mockRestore();
+  });
 });
+

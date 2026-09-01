@@ -28,6 +28,7 @@ import {
   getStateMetadataInDb,
 } from './src/db/repository.ts';
 import { Store, Order, Product, Settlement } from './src/types.ts';
+import { logSuperadminAccess } from './src/api/index.ts';
 
 // In-Memory Telemetry Cache for Pulse
 let pulseCache: { timestamp: number; data: any } | null = null;
@@ -406,10 +407,26 @@ async function startServer() {
       const cleanPass = String(passcode).trim().toLowerCase();
 
       if (role === 'admin') {
+        const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.socket.remoteAddress || '127.0.0.1';
         const adminKeys = ['admin2026', 'admin', 'admin123'];
         if (adminKeys.includes(cleanPass)) {
+          logSuperadminAccess({
+            ip: clientIp,
+            status: 'success',
+            access_type: 'superadmin_auth',
+            endpoint: '/api/auth/verify',
+            method: 'POST',
+          });
           return res.json({ success: true, role: 'admin' });
         }
+        logSuperadminAccess({
+          ip: clientIp,
+          status: 'failure',
+          access_type: 'superadmin_auth',
+          endpoint: '/api/auth/verify',
+          method: 'POST',
+          reason: 'INVALID_MASTER_KEY',
+        });
         return res.status(401).json({ success: false, message: 'Invalid Admin Master Key' });
       }
 
@@ -546,6 +563,14 @@ async function startServer() {
 
       // Fail-closed in production if no secret is configured in environment
       if (isProduction && !configuredSecret) {
+        logSuperadminAccess({
+          ip: clientIp,
+          status: 'failure',
+          access_type: 'superadmin_global_pulse',
+          endpoint: '/api/superadmin/global-pulse',
+          method: 'GET',
+          reason: 'MISSING_PRODUCTION_SECRET',
+        });
         console.error('[Security Error] Production deployment missing required SUPERADMIN_SECRET environment variable.');
         return res.status(500).json({
           error: 'Server Misconfigured: Administrative secret is required in production mode.',
@@ -561,11 +586,27 @@ async function startServer() {
       );
 
       if (!isValid) {
+        logSuperadminAccess({
+          ip: clientIp,
+          status: 'failure',
+          access_type: 'superadmin_global_pulse',
+          endpoint: '/api/superadmin/global-pulse',
+          method: 'GET',
+          reason: 'INVALID_OR_MISSING_SECRET',
+        });
         console.warn(`[Security Audit] Unauthorized superadmin access attempt from IP: ${clientIp}`);
         return res.status(401).json({
           error: 'Unauthorized: Invalid or missing x-elshop-admin-secret signature',
         });
       }
+
+      logSuperadminAccess({
+        ip: clientIp,
+        status: 'success',
+        access_type: 'superadmin_global_pulse',
+        endpoint: '/api/superadmin/global-pulse',
+        method: 'GET',
+      });
 
       // 2. Check TTL Cache
       const now = Date.now();

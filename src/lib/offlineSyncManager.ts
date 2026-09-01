@@ -15,6 +15,22 @@ import {
 } from '../api';
 import { Order, Product, CustomerProfile, KhataTransaction } from '../types';
 
+export interface OfflineSyncLoopSummary {
+  timestamp: string;
+  event: string;
+  level: 'info' | 'warn' | 'error';
+  processed: number;
+  succeeded: number;
+  conflicted: number;
+  conflicts: number;
+  failed: number;
+  durationMs: number;
+  isOnline: boolean;
+  isSimulatedOffline: boolean;
+  consecutiveFailures?: number;
+  [key: string]: any;
+}
+
 type SyncListener = (status: {
   isOnline: boolean;
   isSimulatedOffline: boolean;
@@ -354,6 +370,40 @@ class OfflineSyncManager {
   }
 
   /**
+   * Outputs structured JSON logging to stdout (console.log) to capture periodic sync loop summaries
+   */
+  public logStructuredSummary(summary: {
+    processed: number;
+    succeeded: number;
+    conflicted: number;
+    failed: number;
+    durationMs: number;
+    event?: string;
+    level?: 'info' | 'warn' | 'error';
+    [key: string]: any;
+  }): OfflineSyncLoopSummary {
+    const payload: OfflineSyncLoopSummary = {
+      timestamp: new Date().toISOString(),
+      event: summary.event || 'OFFLINE_SYNC_LOOP_SUMMARY',
+      level: summary.level || (summary.failed > 0 ? 'warn' : 'info'),
+      processed: summary.processed,
+      succeeded: summary.succeeded,
+      conflicted: summary.conflicted,
+      conflicts: summary.conflicted,
+      failed: summary.failed,
+      durationMs: summary.durationMs,
+      isOnline: this.effectiveOnlineStatus(),
+      isSimulatedOffline: this.isSimulatedOffline,
+      consecutiveFailures: this.consecutiveFailures,
+      ...summary,
+    };
+
+    // Print raw structured JSON string to stdout
+    console.log(JSON.stringify(payload));
+    return payload;
+  }
+
+  /**
    * Process all pending items in the sync queue sequentially with conflict detection
    */
   public async processSyncQueue(): Promise<{ processed: number; succeeded: number; conflicts: number; failed: number }> {
@@ -361,6 +411,7 @@ class OfflineSyncManager {
       return { processed: 0, succeeded: 0, conflicts: 0, failed: 0 };
     }
 
+    const startTime = Date.now();
     this.isSyncing = true;
     this.notify();
 
@@ -380,6 +431,15 @@ class OfflineSyncManager {
         this.syncProgress = null;
         this.isSyncing = false;
         this.notify();
+        this.logStructuredSummary({
+          event: 'OFFLINE_SYNC_LOOP_SUMMARY',
+          processed: 0,
+          succeeded: 0,
+          conflicted: 0,
+          failed: 0,
+          durationMs: Date.now() - startTime,
+          level: 'info',
+        });
         return { processed: 0, succeeded: 0, conflicts: 0, failed: 0 };
       }
 
@@ -485,6 +545,19 @@ class OfflineSyncManager {
       this.isSyncing = false;
       this.syncProgress = null;
       this.notify();
+
+      // Emit structured JSON logging summary to stdout (console.log)
+      if (processed > 0) {
+        this.logStructuredSummary({
+          event: 'OFFLINE_SYNC_LOOP_SUMMARY',
+          processed,
+          succeeded,
+          conflicted: conflicts,
+          failed,
+          durationMs: Date.now() - startTime,
+          level: failed > 0 ? 'warn' : 'info',
+        });
+      }
     }
 
     return { processed, succeeded, conflicts, failed };
