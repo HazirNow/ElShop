@@ -282,27 +282,122 @@ ElShop features production-hardened optimizations designed for reliable high-con
 - **Event-Driven Offline Sync & Quarantine**: Client mutations enqueue optimistically to IndexedDB (Dexie) with exponential backoff on retry failures. Items exceeding 5 consecutive failures are quarantined into `'conflict'` review status to prevent infinite sync loops.
 - **Lightweight State Metadata**: Clients check `/api/state/metadata` to verify updated timestamps and entity counts before fetching heavy state.
 
-### 🛠️ Production Database Migration Runbook
+### 🛠️ Production Database Migration & Staged Rollout Runbook
 
-1. **Staging / Production Concurrent Index Execution**:
-   Run the zero-downtime concurrent SQL script (without an explicit transaction block) to build indexes without table locks:
-   ```bash
-   psql -h <POSTGRES_HOST> -U <USER> -d <DB_NAME> -f drizzle/0001_add_performance_indexes_concurrent.sql
-   ```
+#### 1. Pre-Flight Verification (Executed & Passed)
+- **Unit & Integration Tests**: `npx vitest run --run` (35 of 35 tests passing green).
+- **Type Safety & Lint**: `npm run lint` (`tsc --noEmit`) passes with 0 diagnostics.
+- **Production Asset Compilation**: `npm run build` generates `/dist` static assets and bundled CommonJS backend `dist/server.cjs`.
+- **Interactive Persona Demo**: `/public/demo.html` verified with bilingual EN/AR RTL switching, dark/light modes, and high-contrast runner Sunlight mode.
 
-2. **Query Plan Verification**:
-   Verify that PostgreSQL utilizes the new indexes via `EXPLAIN ANALYZE`:
-   ```sql
-   EXPLAIN ANALYZE SELECT store_id, status, count(*) FROM orders GROUP BY store_id, status;
-   ```
+#### 2. Staging Environment Verification (Stage 1)
 
-3. **Rollback Procedure**:
-   Because indexes are additive, reverting them is safe and zero-downtime:
-   ```sql
-   DROP INDEX CONCURRENTLY IF EXISTS orders_store_status_idx;
-   DROP INDEX CONCURRENTLY IF EXISTS khata_transactions_customer_id_idx;
-   DROP INDEX CONCURRENTLY IF EXISTS products_store_category_idx;
-   ```
+##### A. One-Shot Automated Staging Rollout Script
+Ops teams can run the end-to-end rollout script (creates dump, applies concurrent migration, runs EXPLAINs, performs smoke tests, and validates JSON logs):
+```bash
+export STAGE_HOST="staging-db.internal"
+export STAGE_PORT="5432"
+export STAGE_USER="elshop_admin"
+export STAGE_DB="elshop_staging"
+export DB_PASS="your_secure_staging_password"
+export STAGE_URL="https://staging.elshop.internal"
+export SUPERADMIN_SECRET="your_staging_secret"
+
+./tools/staging-rollout.sh
+```
+
+##### B. Manual Step-by-Step Execution
+```bash
+# 1. Non-interactive binary backup
+PGPASSWORD="$DB_PASS" pg_dump -Fc -h "$STAGE_HOST" -p "$STAGE_PORT" -U "$STAGE_USER" -d "$STAGE_DB" -f "backup_$(date +%F).dump"
+
+# 2. Non-interactive concurrent index migration (executed outside transaction block)
+PGPASSWORD="$DB_PASS" psql "host=$STAGE_HOST port=$STAGE_PORT user=$STAGE_USER dbname=$STAGE_DB sslmode=require" -f drizzle/0001_add_performance_indexes_concurrent.sql
+
+# 3. Monitor active locks and I/O wait events during index creation
+PGPASSWORD="$DB_PASS" psql -h "$STAGE_HOST" -U "$STAGE_USER" -d "$STAGE_DB" -c "
+  SELECT pid, now() - query_start AS duration, state, query 
+  FROM pg_stat_activity 
+  WHERE state <> 'idle' 
+  ORDER BY duration DESC LIMIT 10;
+"
+```
+
+##### C. Targeted EXPLAIN ANALYZE for Repository Queries
+Run targeted execution plan checks corresponding to actual application queries:
+```sql
+-- a. Global Pulse Order Aggregation (getSuperadminPulseSummaryInDb)
+EXPLAIN ANALYZE 
+SELECT store_id, 
+       COUNT(*) AS total_orders, 
+       COUNT(CASE WHEN status = 'delivered' THEN 1 END) AS delivered_orders,
+       COUNT(CASE WHEN status IN ('placed', 'packing', 'out_for_delivery') THEN 1 END) AS active_orders,
+       COALESCE(SUM(CASE WHEN status = 'delivered' THEN total ELSE 0 END), 0) AS total_revenue,
+       COUNT(DISTINCT customer_id) AS unique_customers
+FROM orders 
+GROUP BY store_id;
+
+-- b. Building Dispatch Elevator Batching (getBatchedRunsByBuildingInDb)
+EXPLAIN ANALYZE 
+SELECT * FROM orders 
+WHERE status IN ('placed', 'packing', 'out_for_delivery') 
+ORDER BY building;
+
+-- c. Khata Credit Ledger Calculation
+EXPLAIN ANALYZE 
+SELECT type, amount FROM khata_transactions 
+WHERE customer_id = 'cust-001';
+```
+
+##### D. Live API Smoke Tests (Curl)
+```bash
+# 1. Server Health
+curl -sS "https://$STAGE_URL/api/health" | jq .
+
+# 2. Lightweight Metadata Sync
+curl -sS "https://$STAGE_URL/api/state/metadata" | jq .
+
+# 3. Authenticated Superadmin Global Pulse
+curl -sS -H "x-elshop-admin-secret: $SUPERADMIN_SECRET" "https://$STAGE_URL/api/superadmin/global-pulse" | jq .
+```
+
+#### 3. Structured JSON Logging Auditing
+All logs are emitted to standard output (`stdout`) as unnested, parseable JSON lines:
+- **Offline Sync Loop Summary (`OFFLINE_SYNC_LOOP_SUMMARY`)**:
+  ```json
+  {"timestamp":"2026-09-01T08:16:45.000Z","event":"OFFLINE_SYNC_LOOP_SUMMARY","level":"info","processed":5,"succeeded":4,"conflicted":1,"conflicts":1,"failed":0,"durationMs":45,"isOnline":true,"isSimulatedOffline":false}
+  ```
+- **Superadmin Access Attempts (`SUPERADMIN_ACCESS`)**:
+  ```json
+  {"timestamp":"2026-09-01T08:16:45.000Z","ip":"192.168.1.50","status":"success","access_type":"superadmin_global_pulse","endpoint":"/api/superadmin/global-pulse","method":"GET"}
+  ```
+
+##### Real-Time Log Streaming & Parsers
+Stream and inspect specific log events using `jq`:
+```bash
+# Stream Offline Sync Loop Summaries
+tail -F stdout.log | jq -c 'select(.event=="OFFLINE_SYNC_LOOP_SUMMARY") | {ts:.timestamp, processed:.processed, succeeded:.succeeded, conflicts:.conflicts, failed:.failed, durationMs:.durationMs}'
+
+# Stream Superadmin Access Logs
+tail -F stdout.log | jq -c 'select(.access_type=="superadmin_global_pulse" or .event=="SUPERADMIN_ACCESS") | {ts:.timestamp, ip:.ip, status:.status, endpoint:.endpoint, reason:.reason}'
+```
+
+#### 4. Monitoring, Latency Thresholds & Alerts
+Capture real-time logs (`tail -F stdout.log | jq .`) with automated alerts:
+- **Aggregation Latency**: Trigger alert if `/api/superadmin/global-pulse` p95 > 1.0s for 5 consecutive minutes.
+- **Sync Conflict Threshold**: Trigger alert if conflict rate > 5% of processed items over 1 hour.
+- **Queue Backpressure**: Trigger alert if sync queue depth > 2× baseline over 10 minutes.
+- **Security Breach Spike**: Trigger immediate alert if superadmin authentication failures > 5 per minute.
+
+#### 5. Rollback Procedures
+- **Application Rollback**: Redeploy previous Docker container image tag.
+- **Zero-Downtime Index Rollback**:
+  ```sql
+  DROP INDEX CONCURRENTLY IF EXISTS orders_store_status_idx;
+  DROP INDEX CONCURRENTLY IF EXISTS khata_transactions_customer_id_idx;
+  DROP INDEX CONCURRENTLY IF EXISTS products_store_category_idx;
+  ```
+- **Database Restoration**: Restore binary backup (`pg_restore -d <DB_NAME> backup_<DATE>.dump`).
 
 ---
 

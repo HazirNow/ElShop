@@ -274,7 +274,7 @@ function CustomerSimulation({ isArabic }: { isArabic: boolean }) {
                 <motion.div
                   key={cartCount}
                   animate={{ scale: [1, 1.25, 1] }}
-                  transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+                  transition={{ duration: 0.3, ease: 'easeInOut' }}
                   className="flex items-center gap-1.5 bg-emerald-600 text-white px-3 py-1 rounded-full text-xs font-black shadow-md shadow-emerald-950"
                 >
                   <ShoppingBag className="w-3.5 h-3.5" />
@@ -894,6 +894,7 @@ function MerchantSimulation({ isArabic }: { isArabic: boolean }) {
               <motion.div
                 initial={{ scale: 0.95 }}
                 animate={{ scale: [0.95, 1.03, 1] }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
                 className="p-3 bg-emerald-500/20 border-2 border-emerald-500 rounded-xl text-center"
               >
                 <div className="flex items-center justify-center gap-1.5 text-emerald-300 font-black text-xs">
@@ -1182,6 +1183,7 @@ function RiderSimulation({ isArabic }: { isArabic: boolean }) {
               <motion.div
                 initial={{ scale: 0.9 }}
                 animate={{ scale: [0.9, 1.08, 1] }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
                 className={`p-3.5 rounded-2xl text-center border-2 ${
                   isSunlightMode
                     ? 'bg-emerald-100 border-emerald-500 text-slate-950'

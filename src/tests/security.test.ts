@@ -176,4 +176,86 @@ describe('ElShop Platform Security Infrastructure', () => {
 
     logSpy.mockRestore();
   });
+
+  it('should fail-closed in production mode when SUPERADMIN_SECRET is missing', () => {
+    const originalEnv = process.env.NODE_ENV;
+    const originalSecret = process.env.SUPERADMIN_SECRET;
+
+    process.env.NODE_ENV = 'production';
+    delete process.env.SUPERADMIN_SECRET;
+
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    const req = {
+      headers: { 'x-forwarded-for': '127.0.0.1', 'x-elshop-admin-secret': 'admin2026' },
+      path: '/api/superadmin/global-pulse',
+      originalUrl: '/api/superadmin/global-pulse',
+      method: 'GET',
+    };
+    let statusCode = 200;
+    let errorResponse: any = null;
+    const res = {
+      status: (code: number) => {
+        statusCode = code;
+        return {
+          json: (data: any) => {
+            errorResponse = data;
+          },
+        };
+      },
+    };
+
+    superadminAuthMiddleware(req, res);
+
+    expect(statusCode).toBe(500);
+    expect(errorResponse?.error).toContain('Administrative secret is required in production mode');
+
+    const lastLog = JSON.parse(logSpy.mock.calls[logSpy.mock.calls.length - 1][0]);
+    expect(lastLog.status).toBe('failure');
+    expect(lastLog.reason).toBe('MISSING_PRODUCTION_SECRET');
+
+    process.env.NODE_ENV = originalEnv;
+    if (originalSecret) process.env.SUPERADMIN_SECRET = originalSecret;
+    logSpy.mockRestore();
+  });
+
+  it('should strictly conform to the OfflineSyncLoopSummary and SuperadminAccessLog JSON schemas', () => {
+    const sampleSyncLog = {
+      timestamp: '2026-09-01T08:16:45.000Z',
+      event: 'OFFLINE_SYNC_LOOP_SUMMARY',
+      level: 'info',
+      processed: 5,
+      succeeded: 4,
+      conflicted: 1,
+      conflicts: 1,
+      failed: 0,
+      durationMs: 45,
+      isOnline: true,
+      isSimulatedOffline: false,
+    };
+
+    expect(sampleSyncLog).toHaveProperty('timestamp');
+    expect(sampleSyncLog).toHaveProperty('event', 'OFFLINE_SYNC_LOOP_SUMMARY');
+    expect(sampleSyncLog).toHaveProperty('processed');
+    expect(sampleSyncLog).toHaveProperty('succeeded');
+    expect(sampleSyncLog).toHaveProperty('conflicted');
+    expect(sampleSyncLog).toHaveProperty('failed');
+    expect(sampleSyncLog).toHaveProperty('durationMs');
+    expect(sampleSyncLog).toHaveProperty('isOnline');
+    expect(sampleSyncLog).toHaveProperty('isSimulatedOffline');
+
+    const sampleAccessLog = {
+      timestamp: '2026-09-01T08:16:45.000Z',
+      ip: '192.168.1.50',
+      status: 'success',
+      access_type: 'superadmin_global_pulse',
+      endpoint: '/api/superadmin/global-pulse',
+      method: 'GET',
+    };
+
+    expect(sampleAccessLog).toHaveProperty('timestamp');
+    expect(sampleAccessLog).toHaveProperty('ip');
+    expect(sampleAccessLog).toHaveProperty('status');
+    expect(sampleAccessLog).toHaveProperty('access_type');
+  });
 });

@@ -151,13 +151,13 @@ For each of the 10 pilot baqala stores:
 
 ---
 
-## 8. Pre-Flight Deployment Runbook
+## 8. Pre-Flight Deployment Runbook & Staged Rollout
 
 ### Step 1: Pre-Build Test Verification
 ```bash
 npm run test
 ```
-*Expected Output:* `4 passed (4 suites), 24 passed (24 tests), 0 failures`.
+*Expected Output:* `4 passed (4 suites), 35 passed (35 tests), 0 failures`.
 
 ### Step 2: TypeScript & Linter Verification
 ```bash
@@ -166,16 +166,26 @@ npm run build
 ```
 *Expected Output:* Clean Vite client compilation in `/dist` and bundled server in `dist/server.cjs`.
 
-### Step 3: Container Deployment & Ingress Binding
-- Verify application binds to `0.0.0.0:3000`.
-- Verify health check endpoint: `GET /api/health` returns `{"status":"ok"}`.
+### Step 3: Automated Staging Migration & Smoke Script
+Execute the zero-downtime non-blocking migration script with targeted query plan validation:
+```bash
+./tools/staging-rollout.sh
+```
 
-### Step 4: Smoke Test Workflow
+### Step 4: Structured JSON Telemetry Auditing (stdout)
+Stream and verify JSON logs for offline sync and administrative access:
+```bash
+tail -F stdout.log | jq -c 'select(.event=="OFFLINE_SYNC_LOOP_SUMMARY")'
+tail -F stdout.log | jq -c 'select(.access_type=="superadmin_global_pulse")'
+```
+
+### Step 5: Smoke Test Workflow
 1. Load POS terminal at `https://<pilot-domain>/`.
 2. Select **Al Madina Fresh Grocer (store-001)**.
 3. Open **Operational Quick Guide** (`Quick Guide` button in header) and trigger print dialog.
 4. Open **Consolidated P&L** (Tier 3) -> switch to **Loss Prevention ROI** tab -> verify variance data and GCC shrinkage benchmark graphs.
 5. Create a test order -> complete cashier shift reconciliation -> verify audit trail records into `pilot_cash_audit_trail_store-001`.
+6. Verify `/public/demo.html` standalone interactive demo with bilingual EN/AR switching and high-contrast Sunlight mode.
 
 ---
 
