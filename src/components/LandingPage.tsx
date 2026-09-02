@@ -36,6 +36,7 @@ import { ProfitCalculator } from './ProfitCalculator';
 import { FeatureBento } from './FeatureBento';
 import { ElShopLogo } from './ElShopLogo';
 import { UnifiedLoginModal } from './UnifiedLoginModal';
+import { InteractiveDemoSection } from './InteractiveDemoSection';
 import { Footer } from './Footer';
 
 interface LandingPageProps {
@@ -61,14 +62,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [loginModalInitialRole, setLoginModalInitialRole] = useState<Role>('merchant');
 
-  // Interactive Demo Terminal Tab state
-  const [activeDemoTab, setActiveDemoTab] = useState<'pos' | 'khata' | 'dispatch'>('pos');
-
   // FAQ Accordion State
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
-
-  // Watch Demo Video Modal State
-  const [showDemoVideoModal, setShowDemoVideoModal] = useState(false);
 
   const handleOpenLogin = (role: Role = 'merchant') => {
     setLoginModalInitialRole(role);
@@ -138,6 +133,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <a href="#features" className="hover:text-white transition-colors">
               {isRtl ? 'الميزات' : 'Features'}
             </a>
+            <a href="#demo" className="hover:text-white text-emerald-400 font-extrabold transition-colors flex items-center gap-1.5">
+              <span>{isRtl ? 'العرض التفاعلي' : 'Live Demo'}</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            </a>
             <a href="#pricing" className="hover:text-white transition-colors">
               {isRtl ? 'الأسعار' : 'Pricing'}
             </a>
@@ -149,6 +148,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </a>
             <a href="#faq" className="hover:text-white transition-colors">
               {isRtl ? 'الأسئلة الشائعة' : 'FAQ'}
+            </a>
+            <a href="/demo.html" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-white transition-colors text-[11px] flex items-center gap-1 bg-slate-900/90 hover:bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-800 shadow-sm">
+              <span>{isRtl ? 'عرض مستقل' : 'Fullscreen'}</span>
+              <ExternalLink className="w-3 h-3 text-indigo-400" />
             </a>
           </nav>
 
@@ -261,15 +264,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
             <button
               onClick={() => {
-                const el = document.getElementById('demo-terminal');
+                const el = document.getElementById('demo');
                 if (el) el.scrollIntoView({ behavior: 'smooth' });
-                else setShowDemoVideoModal(true);
               }}
               id="hero-secondary-cta-btn"
-              className="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-slate-200 hover:text-white border border-slate-800 font-bold text-sm px-6 py-4 rounded-2xl flex items-center justify-center gap-2 transition-all"
+              className="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-slate-200 hover:text-white border border-slate-800 font-bold text-sm px-6 py-4 rounded-2xl flex items-center justify-center gap-2 transition-all cursor-pointer"
             >
-              <Play className="w-4 h-4 text-indigo-400 fill-indigo-400/20" />
-              <span>{isRtl ? 'شاهد العرض التفاعلي' : 'Watch Demo'}</span>
+              <Play className="w-4 h-4 text-emerald-400 fill-emerald-400/20" />
+              <span>{isRtl ? 'شاهد العرض التفاعلي الحي (4 أدوار)' : 'Experience Interactive Demo (4 Roles)'}</span>
             </button>
           </motion.div>
 
@@ -291,172 +293,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
         </div>
 
-        {/* High-Fidelity Interactive POS Terminal Preview Frame */}
-        <div id="demo-terminal" className="pt-6 max-w-5xl mx-auto">
-          <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-4 sm:p-6 shadow-2xl space-y-4">
-            
-            {/* Terminal Top Chrome */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-3 rounded-full bg-rose-500/80" />
-                  <div className="w-3 h-3 rounded-full bg-amber-500/80" />
-                  <div className="w-3 h-3 rounded-full bg-emerald-500/80" />
-                </div>
-                <div className="h-4 w-[1px] bg-slate-800" />
-                <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-                  <StoreIcon className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>ElShop Merchant POS Terminal • Al Medina Supermarket</span>
-                </span>
-              </div>
-
-              {/* Interactive Terminal Switcher */}
-              <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs font-bold">
-                <button
-                  onClick={() => setActiveDemoTab('pos')}
-                  className={`px-3 py-1 rounded-lg transition-colors ${
-                    activeDemoTab === 'pos' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  POS Orders
-                </button>
-                <button
-                  onClick={() => setActiveDemoTab('khata')}
-                  className={`px-3 py-1 rounded-lg transition-colors ${
-                    activeDemoTab === 'khata' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  Digital Khata Ledger
-                </button>
-                <button
-                  onClick={() => setActiveDemoTab('dispatch')}
-                  className={`px-3 py-1 rounded-lg transition-colors ${
-                    activeDemoTab === 'dispatch' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  Elevator Dispatch
-                </button>
-              </div>
-            </div>
-
-            {/* Terminal Live Screen Content */}
-            <div className="bg-slate-950 rounded-2xl border border-slate-800/80 p-4 sm:p-6 min-h-[300px]">
-              
-              {activeDemoTab === 'pos' && (
-                <div className="space-y-4 animate-fade-in">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-slate-300">Incoming Tower Orders (Live Webhook)</span>
-                    <span className="text-emerald-400 font-mono font-bold">0% Commission Retained</span>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between">
-                      <div className="space-y-1">
-                        <div className="font-bold text-white text-xs">Order #ELS-1042 • Marina Tower 1402</div>
-                        <div className="text-[11px] text-slate-400">2x Fresh Milk 2L, 1x Al Baker Flour, Eggs</div>
-                        <span className="inline-block px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[10px] font-bold">
-                          Khata Debited (Auto-Approved)
-                        </span>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-sm font-black text-emerald-400">48.50 AED</div>
-                        <span className="text-[10px] text-slate-500 font-medium">Packing ready</span>
-                      </div>
-                    </div>
-
-                    <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between">
-                      <div className="space-y-1">
-                        <div className="font-bold text-white text-xs">Order #ELS-1043 • Princess Tower 2208</div>
-                        <div className="text-[11px] text-slate-400">1x Nutella 750g, 2x Toast Bread, OJ</div>
-                        <span className="inline-block px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-400 text-[10px] font-bold">
-                          Apple Pay (Direct Merchant)
-                        </span>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-sm font-black text-white">62.00 AED</div>
-                        <span className="text-[10px] text-indigo-400 font-medium">Assigned to Rider</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {activeDemoTab === 'khata' && (
-                <div className="space-y-4 animate-fade-in">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-slate-300">Monthly Tower Khata Ledger (Zero Bad Debt)</span>
-                    <span className="text-amber-400 font-mono font-bold">WhatsApp Auto-Invoicing</span>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between text-xs">
-                      <div>
-                        <div className="font-bold text-white">Tariq Al-Mansoor • Unit 1402</div>
-                        <div className="text-[11px] text-slate-400">14 Orders this month • Pre-Approved Limit: 500 AED</div>
-                      </div>
-                      <div className="text-right flex items-center gap-3">
-                        <div>
-                          <div className="font-black text-amber-400">324.50 AED</div>
-                          <span className="text-[10px] text-slate-500">Unsettled Balance</span>
-                        </div>
-                        <button 
-                          onClick={() => handleOpenLogin('merchant')}
-                          className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs"
-                        >
-                          Send WhatsApp Statement
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between text-xs">
-                      <div>
-                        <div className="font-bold text-white">Fatima Al-Nuaimi • Unit 0804</div>
-                        <div className="text-[11px] text-slate-400">9 Orders this month • Pre-Approved Limit: 500 AED</div>
-                      </div>
-                      <div className="text-right flex items-center gap-3">
-                        <div>
-                          <div className="font-black text-emerald-400">0.00 AED (Paid)</div>
-                          <span className="text-[10px] text-slate-500">Settled via Card</span>
-                        </div>
-                        <span className="text-xs text-emerald-400 font-bold px-2 py-1 bg-emerald-500/10 rounded-lg">
-                          Settled
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {activeDemoTab === 'dispatch' && (
-                <div className="space-y-4 animate-fade-in">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-slate-300">In-House Courier Elevator Routing</span>
-                    <span className="text-indigo-400 font-mono font-bold">15-Min Delivery Guarantee</span>
-                  </div>
-
-                  <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3 text-xs">
-                    <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-                      <div className="flex items-center gap-2">
-                        <Bike className="w-4 h-4 text-indigo-400" />
-                        <span className="font-bold text-white">Rider: Ahmed (Active Trip #8)</span>
-                      </div>
-                      <span className="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-bold text-[10px]">
-                        Floors Batched: [8, 14, 22]
-                      </span>
-                    </div>
-                    <p className="text-slate-400 text-[11px]">
-                      The runner takes 1 single elevator ride to complete 3 tower deliveries at once, cutting courier round-trips by 65%.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-            </div>
-
-          </div>
-        </div>
-
       </section>
+
+      {/* =========================================================================
+          INTERACTIVE PRODUCT DEMO (Customer Storefront, Merchant POS, Rider, Admin)
+         ========================================================================= */}
+      <InteractiveDemoSection
+        lang={lang}
+        onOpenSignup={onOpenMerchantOnboarding}
+        onOpenStoreLogin={() => handleOpenLogin('merchant')}
+      />
 
       {/* =========================================================================
           3. FEATURE BENTO GRID (Strict Merchant Value: Khata, Inventory, Riders)

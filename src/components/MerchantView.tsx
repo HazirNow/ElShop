@@ -45,7 +45,9 @@ import {
   Printer,
   Download,
   Scan,
-  Barcode
+  Barcode,
+  PackageX,
+  TrendingDown
 } from 'lucide-react';
 import { AppState, Order, Product, Rider, Supplier, CustomerProfile, ProductCategory, Language } from '../types';
 import { updateOrder, updateProduct, createProduct, deleteProduct, createSupplier, deleteSupplier, submitSettlement, updateCustomer, updateStore } from '../api';
@@ -74,6 +76,7 @@ import { ConsolidatedPnLView } from './ConsolidatedPnLView';
 import { StaffManagementView } from './StaffManagementView';
 import { MerchantCameraPromptModal } from './MerchantCameraPromptModal';
 import { CashierQuickGuideModal } from './CashierQuickGuideModal';
+import { DeadStockAnalysisModal } from './DeadStockAnalysisModal';
 
 interface Props {
   state: AppState;
@@ -144,13 +147,14 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
 
   // Inventory search & category/filter
   const [invSearch, setInvSearch] = useState('');
-  const [invFilter, setInvFilter] = useState<'all' | 'sale' | 'low_stock'>('all');
+  const [invFilter, setInvFilter] = useState<'all' | 'sale' | 'low_stock' | 'slow_movers'>('all');
 
   // Suppliers state
   const suppliers = state.suppliers || [];
 
   // Modals state
   const [showAddProductModal, setShowAddProductModal] = useState(false);
+  const [showDeadStockModal, setShowDeadStockModal] = useState(false);
   const [editingSaleProduct, setEditingSaleProduct] = useState<Product | null>(null);
   const [showSupplierModal, setShowSupplierModal] = useState(false);
   const [reorderProduct, setReorderProduct] = useState<Product | null>(null);
@@ -167,20 +171,27 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
   const [showShiftReconciliationModal, setShowShiftReconciliationModal] = useState(false);
   const [showCashierGuideModal, setShowCashierGuideModal] = useState(false);
 
-  // Prompt merchant for camera access on initial POS entry if not already decided
-  useEffect(() => {
+  // Helper to trigger product photo capture with merchant camera permission prompt only when adding/editing products
+  const handleSnapProductPhoto = (targetProduct: Product | null = null, preferLiveViewfinder: boolean = false) => {
+    setCameraTargetProduct(targetProduct);
+    let prompted = false;
     try {
-      const prompted = localStorage.getItem('elshop_merchant_camera_prompted');
-      if (!prompted) {
-        const timer = setTimeout(() => {
-          setShowCameraPromptModal(true);
-        }, 900);
-        return () => clearTimeout(timer);
-      }
+      prompted = localStorage.getItem('elshop_merchant_camera_prompted') === 'true';
     } catch (e) {
       // Ignore localStorage restrictions
     }
-  }, []);
+
+    if (!prompted) {
+      setShowCameraPromptModal(true);
+      return;
+    }
+
+    if (preferLiveViewfinder) {
+      setShowCameraModal(true);
+    } else {
+      nativeCameraInputRef.current?.click();
+    }
+  };
 
   // Offline Sync hook
   const { isOnline, isSimulatedOffline, isSyncing, pendingCount } = useOfflineSync();
@@ -261,6 +272,37 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
   };
 
   const lowStockProducts = storeProducts.filter(isProductLowStock);
+
+  // Dead Stock & Velocity Calculation
+  const productSalesVelocity = React.useMemo(() => {
+    const salesMap: Record<string, { totalSold: number; ordersCount: number }> = {};
+    storeOrders.forEach((o) => {
+      if (o.status !== 'cancelled') {
+        o.items.forEach((item) => {
+          if (!salesMap[item.productId]) {
+            salesMap[item.productId] = { totalSold: 0, ordersCount: 0 };
+          }
+          salesMap[item.productId].totalSold += item.quantity || 0;
+          salesMap[item.productId].ordersCount += 1;
+        });
+      }
+    });
+    return salesMap;
+  }, [storeOrders]);
+
+  const deadStockProducts = React.useMemo(() => {
+    return storeProducts.filter((p) => {
+      const stats = productSalesVelocity[p.id];
+      return !stats || stats.totalSold === 0;
+    });
+  }, [storeProducts, productSalesVelocity]);
+
+  const slowMoversAndDeadProducts = React.useMemo(() => {
+    return storeProducts.filter((p) => {
+      const stats = productSalesVelocity[p.id];
+      return !stats || stats.totalSold <= 2;
+    });
+  }, [storeProducts, productSalesVelocity]);
 
   const handleUpdateProductThreshold = async (product: Product, threshold: number) => {
     const safeThreshold = Math.max(1, Math.floor(threshold));
@@ -1457,6 +1499,19 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
                 <span>Low Stock ({lowStockProducts.length})</span>
               </button>
 
+              <button
+                onClick={() => setInvFilter('slow_movers')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 ${
+                  invFilter === 'slow_movers'
+                    ? 'bg-rose-700 text-white shadow'
+                    : 'bg-slate-800 text-rose-300 hover:bg-slate-700'
+                }`}
+                title="Filter products that are not selling or rarely selling"
+              >
+                <PackageX className="w-3.5 h-3.5" />
+                <span>{isRtl ? `الراكد / نادر (${slowMoversAndDeadProducts.length})` : `Zero / Rare Sales (${slowMoversAndDeadProducts.length})`}</span>
+              </button>
+
               {/* Master Low-Stock Alerts Switch */}
               <button
                 onClick={() => setShowLowStockAlerts(!showLowStockAlerts)}
@@ -1496,6 +1551,14 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
             {/* Merchant Action Buttons */}
             <div className="flex items-center gap-2">
               <button
+                onClick={() => setShowDeadStockModal(true)}
+                className="bg-rose-950/80 hover:bg-rose-900 border border-rose-500/50 text-rose-300 hover:text-white font-bold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow transition-all whitespace-nowrap active:scale-95"
+                title="Open Dead Stock & Non-Selling Products Analytics"
+              >
+                <PackageX className="w-4 h-4 text-rose-400" />
+                <span>{isRtl ? `المنتجات الراكدة (${deadStockProducts.length})` : `Dead Stock (${deadStockProducts.length})`}</span>
+              </button>
+              <button
                 onClick={() => setShowAddProductModal(true)}
                 className="bg-[#0B6E4F] hover:bg-emerald-600 text-white font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow transition-all whitespace-nowrap"
               >
@@ -1525,6 +1588,10 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
                 if (!matchesSearch) return false;
                 if (invFilter === 'sale') return Boolean(p.sale ?? p.isOnSale);
                 if (invFilter === 'low_stock') return isProductLowStock(p);
+                if (invFilter === 'slow_movers') {
+                  const sold = productSalesVelocity[p.id]?.totalSold || 0;
+                  return sold <= 2;
+                }
                 return true;
               })
               .map((p) => {
@@ -1536,6 +1603,9 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
                 const isSale = Boolean(p.sale ?? p.isOnSale);
                 const regP = p.regularPrice ?? p.originalPrice ?? p.price;
                 const discP = p.discountedPrice ?? p.price;
+                const unitsSold = productSalesVelocity[p.id]?.totalSold || 0;
+                const isDead = unitsSold === 0;
+                const isRare = unitsSold > 0 && unitsSold <= 2;
                 const effectiveP = isSale && discP !== undefined ? discP : regP;
 
                 // Expiry calculations
@@ -1579,10 +1649,7 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
                             />
                             <button
                               type="button"
-                              onClick={() => {
-                                setCameraTargetProduct(p);
-                                nativeCameraInputRef.current?.click();
-                              }}
+                              onClick={() => handleSnapProductPhoto(p, false)}
                               className="absolute -bottom-1 -right-1 bg-slate-900/95 hover:bg-emerald-600 text-slate-300 hover:text-white p-1 rounded-lg border border-slate-700 shadow-md transition-all active:scale-95"
                               title="Snap Photo with Phone Camera (Direct)"
                             >
@@ -1634,6 +1701,20 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
 
                       {/* Badges & Alert Status Row */}
                       <div className="flex flex-wrap items-center gap-1.5 mb-3">
+                        {isDead && (
+                          <span className="bg-rose-950 text-rose-300 border border-rose-800 text-[9px] font-black px-2 py-0.5 rounded-md flex items-center gap-1">
+                            <PackageX className="w-3 h-3 text-rose-400" />
+                            <span>0 SOLD (DEAD STOCK)</span>
+                          </span>
+                        )}
+
+                        {isRare && !isDead && (
+                          <span className="bg-amber-950 text-amber-300 border border-amber-800 text-[9px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1">
+                            <TrendingDown className="w-3 h-3 text-amber-400" />
+                            <span>RARE SALES ({unitsSold} sold)</span>
+                          </span>
+                        )}
+
                         {isLowStock && showLowStockAlerts && (
                           <span className="bg-rose-600 text-white border border-rose-400 text-[9px] font-black px-2 py-0.5 rounded-md flex items-center gap-1 shadow animate-pulse">
                             <AlertTriangle className="w-3 h-3 text-white" />
@@ -2914,10 +2995,7 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
                       <div className="grid grid-cols-2 gap-2">
                         <button
                           type="button"
-                          onClick={() => {
-                            setCameraTargetProduct(null);
-                            nativeCameraInputRef.current?.click();
-                          }}
+                          onClick={() => handleSnapProductPhoto(null, false)}
                           className="w-full bg-gradient-to-r from-[#0B6E4F] to-emerald-600 hover:from-emerald-600 hover:to-emerald-500 text-white font-bold py-2.5 px-2 rounded-xl text-[11px] flex items-center justify-center gap-1.5 shadow-md shadow-emerald-950/40 transition-all border border-emerald-400/30"
                         >
                           <Camera className="w-3.5 h-3.5 text-emerald-100 shrink-0" />
@@ -2946,10 +3024,7 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
                         </button>
                         <button
                           type="button"
-                          onClick={() => {
-                            setCameraTargetProduct(null);
-                            setShowCameraModal(true);
-                          }}
+                          onClick={() => handleSnapProductPhoto(null, true)}
                           className="text-slate-400 hover:text-emerald-400 underline underline-offset-2 transition-all"
                         >
                           Live Viewfinder
@@ -3607,7 +3682,17 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
       {/* Merchant Camera Permission Prompt Modal */}
       <MerchantCameraPromptModal
         isOpen={showCameraPromptModal}
-        onClose={() => setShowCameraPromptModal(false)}
+        onClose={() => {
+          setShowCameraPromptModal(false);
+          // Fallback to native camera input on skip
+          if (nativeCameraInputRef.current) {
+            nativeCameraInputRef.current.click();
+          }
+        }}
+        onPermissionGranted={() => {
+          setShowCameraPromptModal(false);
+          setShowCameraModal(true);
+        }}
         lang={lang}
       />
 
@@ -3908,10 +3993,7 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
                     />
                     <button
                       type="button"
-                      onClick={() => {
-                        setCameraTargetProduct(editingFullProduct);
-                        nativeCameraInputRef.current?.click();
-                      }}
+                      onClick={() => handleSnapProductPhoto(editingFullProduct, false)}
                       className="bg-slate-800 hover:bg-emerald-600 border border-slate-700 text-slate-300 hover:text-white px-3 py-2 rounded-xl flex items-center gap-1.5 font-bold transition-all"
                       title="Snap photo with camera"
                     >
@@ -3950,6 +4032,18 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
         onClose={() => setShowCashierGuideModal(false)}
         lang={lang}
         store={store}
+      />
+
+      {/* Dead Stock & Slow Movers Analyzer Modal */}
+      <DeadStockAnalysisModal
+        isOpen={showDeadStockModal}
+        onClose={() => setShowDeadStockModal(false)}
+        products={storeProducts}
+        orders={storeOrders}
+        lang={lang}
+        storeName={store?.name}
+        onProductUpdated={() => onRefresh()}
+        onOpenEditModal={(p) => handleOpenEditProduct(p)}
       />
 
       {/* Hidden native camera and gallery file inputs */}

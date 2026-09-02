@@ -55,6 +55,7 @@ import { AdminUserTable } from './admin/AdminUserTable';
 import { AdminBillingView } from './admin/AdminBillingView';
 import { AdminAuditLogs, AuditLogEntry } from './admin/AdminAuditLogs';
 import { AdminKpiSkeleton, AdminTableSkeleton } from './admin/AdminSkeletonLoaders';
+import { AdminAnalyticsCharts } from './admin/AdminAnalyticsCharts';
 
 interface AdminDashboardProps {
   state: AppState;
@@ -552,6 +553,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       </div>
                     </div>
                   </div>
+
+                  {/* Integrated Recharts: Daily Revenue Trend & Store Subscription Distribution */}
+                  <AdminAnalyticsCharts
+                    orders={state.orders}
+                    stores={state.stores}
+                    lang={currentLang}
+                  />
 
                   {/* Tier 3 Franchise Gross Margin & Performance Analytics Card */}
                   <div className="bg-slate-900 border border-purple-500/30 rounded-2xl p-5 space-y-4 shadow-xl">

@@ -110,11 +110,11 @@ export const MerchantCameraPromptModal: React.FC<MerchantCameraPromptModalProps>
               <div>
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/30">
-                    {isRtl ? 'خاص بالتاجر فقط' : 'Merchant POS Only'}
+                    {isRtl ? 'إضافة منتجات للكتالوج • خاص بالتاجر' : 'Add Products • Merchant POS Only'}
                   </span>
                 </div>
                 <h3 className="text-lg font-black text-white mt-1">
-                  {isRtl ? 'تفعيل كاميرا نقطة البيع' : 'Enable POS Camera Access'}
+                  {isRtl ? 'تفعيل الكاميرا لتصوير المنتجات' : 'Enable Product Photo & Barcode Camera'}
                 </h3>
               </div>
             </div>
@@ -132,8 +132,8 @@ export const MerchantCameraPromptModal: React.FC<MerchantCameraPromptModalProps>
           {/* Description */}
           <p className="text-xs text-slate-300 leading-relaxed">
             {isRtl
-              ? 'تستخدم نقطة البيع الكاميرا لتصوير المنتجات الجديدة بسرعة وقراءة الباركود عند الكاونتر. هذا الطلب خاص بالتاجر فقط ولا يُطلب من الزبائن أو السائقين.'
-              : 'Enable camera access to instantly snap product packaging photos for your catalog and scan barcodes directly from your counter terminal.'}
+              ? 'السماح لكاميرا نقطة البيع بالتقاط صور عبوات المنتجات فوراً وإضافتها لكتالوج بقالتك، بالإضافة لمسح الباركود عند الكاونتر. الزبائن وعمال التوصيل لا يتم سؤالهم أبداً عن هذا الإذن.'
+              : 'Enable camera access to instantly snap product packaging photos for your store catalog and scan retail barcodes. Customers and delivery runners are never prompted for camera permissions.'}
           </p>
 
           {/* Feature highlights */}
@@ -142,19 +142,19 @@ export const MerchantCameraPromptModal: React.FC<MerchantCameraPromptModalProps>
               <div className="w-6 h-6 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
                 📸
               </div>
-              <span>{isRtl ? 'تصوير فوري لعبوات البقالة والمشروبات' : '1-Tap Product Photo Snapper for Catalog'}</span>
+              <span>{isRtl ? 'تصوير فوري لعبوات البقالة والمشروبات للكتالوج' : '1-Tap Product Photo Snapper for Store Catalog'}</span>
             </div>
             <div className="flex items-center gap-2.5">
               <div className="w-6 h-6 rounded-lg bg-indigo-500/20 flex items-center justify-center text-indigo-400 shrink-0">
                 🔍
               </div>
-              <span>{isRtl ? 'مسح سريع للباركود وفواتير الموردين' : 'Fast Barcode & Inbound Supplier Invoices'}</span>
+              <span>{isRtl ? 'مسح سريع للباركود وفواتير الموردين عند الكاونتر' : 'Fast Barcode & Inbound Supplier Invoices'}</span>
             </div>
             <div className="flex items-center gap-2.5">
               <div className="w-6 h-6 rounded-lg bg-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
                 🔒
               </div>
-              <span>{isRtl ? 'خصوصية تامة للزبائن والمناديب' : 'Customer & Runner privacy protected (No prompts for them)'}</span>
+              <span>{isRtl ? 'خصوصية تامة: لا تظهر أي نافذة أذونات للمشترين أو المناديب' : 'Strict Role Privacy: Customers & Riders are never prompted'}</span>
             </div>
           </div>
 

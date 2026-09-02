@@ -95,6 +95,12 @@ export const Footer: React.FC<FooterProps> = ({
             </h4>
             <ul className="space-y-2 text-xs">
               <li>
+                <a href="#demo" className="hover:text-white text-emerald-400 font-bold transition-colors flex items-center gap-1">
+                  <span>{isRtl ? 'العرض التفاعلي الحي' : 'Live Interactive Demo'}</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                </a>
+              </li>
+              <li>
                 <a href="#features" className="hover:text-white transition-colors">
                   {isRtl ? 'الميزات والخواص' : 'Core Features'}
                 </a>
@@ -119,8 +125,9 @@ export const Footer: React.FC<FooterProps> = ({
                 </button>
               </li>
               <li>
-                <a href="#elevator-kit" className="hover:text-white transition-colors">
-                  {isRtl ? 'ملصقات مصاعد الأبراج' : 'Elevator QR Kit'}
+                <a href="/demo.html" target="_blank" rel="noopener noreferrer" className="hover:text-white text-slate-300 transition-colors flex items-center gap-1">
+                  <span>{isRtl ? 'العرض المستقل (شاشة كاملة)' : 'Fullscreen Demo (Standalone)'}</span>
+                  <ExternalLink className="w-3 h-3 text-indigo-400" />
                 </a>
               </li>
             </ul>
