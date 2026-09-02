@@ -64,13 +64,14 @@ export const InteractiveDemoSection: React.FC<InteractiveDemoSectionProps> = ({
 }) => {
   const isRtl = lang === 'ar';
 
-  // 4 Main Persona Tabs
-  const [activePersona, setActivePersona] = useState<'customer' | 'merchant' | 'rider' | 'admin'>('customer');
+  // 3 Focused Persona Tabs (Customer, Merchant POS, Runner)
+  const [activePersona, setActivePersona] = useState<'customer' | 'merchant' | 'rider'>('customer');
 
-  // GUIDED DEMO STATE (6 Comprehensive Steps)
+  // GUIDED DEMO STATE (5 Focused Steps)
   const [guidedStep, setGuidedStep] = useState<number>(1);
   const [isAutoPlaying, setIsAutoPlaying] = useState<boolean>(false);
   const [showGuidedTour, setShowGuidedTour] = useState<boolean>(true);
+
 
   // TAB 1: Customer State & Catalogue
   const [customerScreen, setCustomerScreen] = useState<1 | 2 | 3>(1);
@@ -159,12 +160,12 @@ export const InteractiveDemoSection: React.FC<InteractiveDemoSectionProps> = ({
     });
   };
 
-  // Auto-play Guided Tour Loop
+  // Auto-play Guided Tour Loop (5 Focused Steps across Customer, Merchant, Runner)
   useEffect(() => {
     if (!isAutoPlaying) return;
     const interval = setInterval(() => {
       setGuidedStep((prev) => {
-        const next = prev >= 6 ? 1 : prev + 1;
+        const next = prev >= 5 ? 1 : prev + 1;
         // Sync Persona tab with step
         if (next === 1) {
           setActivePersona('customer');
@@ -183,8 +184,6 @@ export const InteractiveDemoSection: React.FC<InteractiveDemoSectionProps> = ({
         } else if (next === 5) {
           setActivePersona('rider');
           setRiderScreen(3);
-        } else if (next === 6) {
-          setActivePersona('admin');
         }
         return next;
       });
@@ -214,10 +213,9 @@ export const InteractiveDemoSection: React.FC<InteractiveDemoSectionProps> = ({
     } else if (stepNum === 5) {
       setActivePersona('rider');
       setRiderScreen(3);
-    } else if (stepNum === 6) {
-      setActivePersona('admin');
     }
   };
+
 
   // Filter products by category and search
   const filteredProducts = DEMO_PRODUCTS.filter((p) => {
@@ -241,19 +239,19 @@ export const InteractiveDemoSection: React.FC<InteractiveDemoSectionProps> = ({
         <div className="text-center max-w-3xl mx-auto space-y-3">
           <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold uppercase tracking-wider shadow-sm">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>{isRtl ? 'تجربة النظام التفاعلية الكاملة' : 'Interactive Guided Product Demo'}</span>
+            <span>{isRtl ? 'تجربة النظام التفاعلية' : 'Interactive Product Demo'}</span>
           </div>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight">
-            {isRtl ? 'شاهد كيف يعمل النظام لجميع الأطراف' : 'Experience ElShop Across 4 Core Roles'}
+            {isRtl ? 'تجربة ثلاثية تفاعلية: العميل • الكاشير • المندوب' : '3-Way Realtime Experience: Customer • POS • Runner'}
           </h2>
           <p className="text-sm sm:text-base text-slate-400 max-w-2xl mx-auto">
             {isRtl
-              ? 'محاكاة واقعية بالأبعاد والأجهزة الحقيقية. اتبع المؤشرات الواضحة (انقر هنا) لتأخذ جولة شاملة ومكتملة للمشروع بكل ميزاته.'
-              : 'Fixed-dimension real-device interactive simulation. Follow the clear "CLICK HERE" pointers to take a complete interactive tour across all platforms.'}
+              ? 'محاكاة تفاعلية فورية. اتبع المؤشرات الدائرية المضيئة لاستكشاف دورة الطلب والتوصيل بالكامل.'
+              : 'Interactive device simulation. Follow the subtle pulsating pointers to test ordering, POS packaging, and doorstep delivery.'}
           </p>
         </div>
 
-        {/* GUIDED DEMO STEP-BY-STEP CONTROL BAR (6 Steps) */}
+        {/* GUIDED DEMO STEP-BY-STEP CONTROL BAR (5 Steps) */}
         {showGuidedTour && (
           <div className="max-w-4xl mx-auto bg-slate-900/90 border border-emerald-500/40 rounded-3xl p-4 sm:p-5 shadow-2xl backdrop-blur-xl space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
@@ -264,17 +262,16 @@ export const InteractiveDemoSection: React.FC<InteractiveDemoSectionProps> = ({
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-black uppercase tracking-wider text-emerald-400">
-                      {isRtl ? `الخطوة ${guidedStep} من 6 • جولة تفاعلية` : `Interactive Tour • Step ${guidedStep} of 6`}
+                      {isRtl ? `الخطوة ${guidedStep} من 5 • جولة إرشادية` : `Interactive Tour • Step ${guidedStep} of 5`}
                     </span>
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
                   </div>
                   <h4 className="text-sm font-black text-white">
-                    {guidedStep === 1 && (isRtl ? '١. استكشف العروض الخاصة والباقات الحصرية وأضف للسلة' : '1. Special Offers & Super Bundles (Up to 50% Off)')}
-                    {guidedStep === 2 && (isRtl ? '٢. تصفح فئات البقالة (مخبوزات طازجة، ألبان، مواد تموينية)' : '2. Category Switch (Fresh Bakery, Dairy & Staples)')}
-                    {guidedStep === 3 && (isRtl ? '٣. فعّل حساب الدفتر الشهري لسكان البرج (الخاتا)' : '3. Enable Monthly Khata Credit Tab (Pay Later)')}
-                    {guidedStep === 4 && (isRtl ? '٤. استقبل الطلب على شاشة كاشير البقالة وجمّع للمصعد' : '4. POS Kanban Dispatch to Tower Elevator')}
-                    {guidedStep === 5 && (isRtl ? '٥. تسليم المندوب عند باب الشقة مع نمط الشمس وحاسبة الفكة' : '5. Rider 45°C Sunlight Mode & Cash Change Return')}
-                    {guidedStep === 6 && (isRtl ? '٦. لوحة التحكم العامة لإدارة ٢٤ بقالة وبث التنبيهات' : '6. Superadmin Global Pulse Cockpit & Store Audit')}
+                    {guidedStep === 1 && (isRtl ? '١. استكشف العروض الخاصة وأضف للسلة' : '1. Special Offers & Super Bundles (Up to 50% Off)')}
+                    {guidedStep === 2 && (isRtl ? '٢. تصفح فئات البقالة (مخبوزات، ألبان، تموين)' : '2. Category Switch (Fresh Bakery & Dairy)')}
+                    {guidedStep === 3 && (isRtl ? '٣. فعّل حساب الدفتر الشهري (الخاتا)' : '3. Enable Monthly Khata Credit Tab')}
+                    {guidedStep === 4 && (isRtl ? '٤. كاشير البقالة وتجهيز الدفعة للمصعد' : '4. POS Kanban & Dispatch to Elevator')}
+                    {guidedStep === 5 && (isRtl ? '٥. تسليم المندوب عند الباب وحساب الفكة' : '5. Rider Doorstep Delivery & Cash Change')}
                   </h4>
                 </div>
               </div>
@@ -290,7 +287,7 @@ export const InteractiveDemoSection: React.FC<InteractiveDemoSectionProps> = ({
                   }`}
                 >
                   {isAutoPlaying ? <Pause className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current" />}
-                  <span>{isAutoPlaying ? (isRtl ? 'إيقاف مؤقت' : 'Pause Tour') : (isRtl ? 'تشغيل العرض التلقائي' : 'Auto-Play Tour')}</span>
+                  <span>{isAutoPlaying ? (isRtl ? 'إيقاف مؤقت' : 'Pause Tour') : (isRtl ? 'تشغيل تلقائي' : 'Auto-Play')}</span>
                 </button>
 
                 <button
@@ -303,15 +300,14 @@ export const InteractiveDemoSection: React.FC<InteractiveDemoSectionProps> = ({
               </div>
             </div>
 
-            {/* 6 Step Indicator Pills */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 pt-1">
+            {/* 5 Step Indicator Pills */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 pt-1">
               {[
-                { step: 1, label: isRtl ? '🔥 1. عروض خاصة' : '🔥 1. Special Offers' },
-                { step: 2, label: isRtl ? '🍞 2. تبديل الفئات' : '🍞 2. Categories' },
+                { step: 1, label: isRtl ? '🔥 1. عروض خاصة' : '🔥 1. Offers' },
+                { step: 2, label: isRtl ? '🍞 2. فئات المنتجات' : '🍞 2. Categories' },
                 { step: 3, label: isRtl ? '📒 3. دفتر الخاتا' : '📒 3. Khata Tab' },
-                { step: 4, label: isRtl ? '💻 4. كاشير وتجميع' : '💻 4. POS Dispatch' },
-                { step: 5, label: isRtl ? '🚴 5. توصيل وفكة' : '🚴 5. Rider & Cash' },
-                { step: 6, label: isRtl ? '📊 6. الإدارة العامة' : '📊 6. Admin Pulse' }
+                { step: 4, label: isRtl ? '💻 4. كاشير وتجهيز' : '💻 4. POS Dispatch' },
+                { step: 5, label: isRtl ? '🚴 5. توصيل وفكة' : '🚴 5. Rider Delivery' }
               ].map((item) => (
                 <button
                   key={item.step}
@@ -329,7 +325,7 @@ export const InteractiveDemoSection: React.FC<InteractiveDemoSectionProps> = ({
           </div>
         )}
 
-        {/* 4 Persona Segmented Switcher */}
+        {/* 3 Focused Persona Switcher (Customer | Merchant POS | Rider) */}
         <div className="flex justify-center">
           <div className="inline-flex flex-wrap p-1.5 rounded-2xl bg-slate-900/90 border border-slate-800 backdrop-blur-xl shadow-xl gap-1 max-w-full">
             <button
@@ -337,14 +333,14 @@ export const InteractiveDemoSection: React.FC<InteractiveDemoSectionProps> = ({
                 setActivePersona('customer');
                 setIsAutoPlaying(false);
               }}
-              className={`flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+              className={`flex items-center gap-2 px-4 sm:px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
                 activePersona === 'customer'
                   ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30 ring-1 ring-emerald-400'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
               }`}
             >
               <Smartphone className="w-4 h-4" />
-              <span>{isRtl ? '1. تجربة العميل (هاتف)' : '1. Customer Phone'}</span>
+              <span>{isRtl ? '١. تجربة العميل (هاتف)' : '1. Customer App'}</span>
             </button>
 
             <button
@@ -352,14 +348,14 @@ export const InteractiveDemoSection: React.FC<InteractiveDemoSectionProps> = ({
                 setActivePersona('merchant');
                 setIsAutoPlaying(false);
               }}
-              className={`flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+              className={`flex items-center gap-2 px-4 sm:px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
                 activePersona === 'merchant'
                   ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30 ring-1 ring-emerald-400'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
               }`}
             >
               <Tablet className="w-4 h-4" />
-              <span>{isRtl ? '2. عمليات البقالة (تابلت)' : '2. Merchant POS Tablet'}</span>
+              <span>{isRtl ? '٢. كاشير البقالة (تابلت)' : '2. Merchant POS'}</span>
             </button>
 
             <button
@@ -367,29 +363,14 @@ export const InteractiveDemoSection: React.FC<InteractiveDemoSectionProps> = ({
                 setActivePersona('rider');
                 setIsAutoPlaying(false);
               }}
-              className={`flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+              className={`flex items-center gap-2 px-4 sm:px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
                 activePersona === 'rider'
                   ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30 ring-1 ring-emerald-400'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
               }`}
             >
               <Bike className="w-4 h-4" />
-              <span>{isRtl ? '3. تطبيق المندوب (هاتف)' : '3. Rider Phone'}</span>
-            </button>
-
-            <button
-              onClick={() => {
-                setActivePersona('admin');
-                setIsAutoPlaying(false);
-              }}
-              className={`flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
-                activePersona === 'admin'
-                  ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30 ring-1 ring-emerald-400'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-              }`}
-            >
-              <Building2 className="w-4 h-4" />
-              <span>{isRtl ? '4. لوحة الإدارة العامة' : '4. Global Admin'}</span>
+              <span>{isRtl ? '٣. تطبيق المندوب (هاتف)' : '3. Runner App'}</span>
             </button>
           </div>
         </div>
@@ -530,14 +511,14 @@ export const InteractiveDemoSection: React.FC<InteractiveDemoSectionProps> = ({
                       {guidedStep === 2 && (
                         <div className="absolute -top-1 left-28 z-40">
                           <GesturePointer
-                            actionText={isRtl ? 'انقر هنا' : 'CLICK HERE'}
-                            label={isRtl ? 'تصفح فئة المخبوزات الطازجة' : 'Explore Fresh Bakery'}
-                            subLabel={isRtl ? 'انقر هنا لتغيير الفئة واستعراض الخبز' : 'Click here to browse fresh bread & bakery'}
+                            actionText={isRtl ? 'انقر' : 'click'}
+                            label={isRtl ? 'تصفح المخبوزات' : 'Explore Bakery'}
+                            subLabel={isRtl ? 'انقر هنا للتبديل' : 'Click to switch'}
                             pulseColor="sky"
                             hintPosition="bottom"
                             onClick={() => {
                               setSelectedCategory('bakery');
-                              showToast(isRtl ? 'تم الانتقال لقسم المخبوزات' : 'Browsing Fresh Bakery');
+                              showToast(isRtl ? 'تم الانتقال للمخبوزات' : 'Browsing Bakery');
                               setTimeout(() => {
                                 setGuidedStep(3);
                                 setCustomerScreen(2);
@@ -591,9 +572,9 @@ export const InteractiveDemoSection: React.FC<InteractiveDemoSectionProps> = ({
                             {guidedStep === 1 && isFirstOffer && (
                               <div className="absolute right-4 top-1/2 -translate-y-1/2 z-40">
                                 <GesturePointer
-                                  actionText={isRtl ? 'انقر هنا' : 'CLICK HERE'}
-                                  label={isRtl ? 'أضف عرض فطور الويكند (وفر ٢٧٪)' : 'Add Weekend Combo (Save 27%)'}
-                                  subLabel={isRtl ? 'انقر هنا لإضافة أول عرض خاص وتجربة السلة' : 'Click here to add the hot special offer to your cart'}
+                                  actionText={isRtl ? 'انقر' : 'click'}
+                                  label={isRtl ? 'أضف عرض الفطور' : 'Add Breakfast Combo'}
+                                  subLabel={isRtl ? 'انقر للإضافة' : 'Click to add to cart'}
                                   pulseColor="emerald"
                                   hintPosition="left"
                                   onClick={() => handleAddToCart(product)}
@@ -768,9 +749,9 @@ export const InteractiveDemoSection: React.FC<InteractiveDemoSectionProps> = ({
                       {guidedStep === 3 && (
                         <div className="absolute right-6 top-2 z-40">
                           <GesturePointer
-                            actionText={isRtl ? 'انقر هنا' : 'CLICK HERE'}
-                            label={isRtl ? 'فعّل دفتر الخاتا (الدفع المؤجل)' : 'Toggle Monthly Khata Credit'}
-                            subLabel={isRtl ? 'انقر هنا لتسجيل الطلب على حساب السكان الشهري' : 'Click here to enable instant resident pay-later credit'}
+                            actionText={isRtl ? 'انقر' : 'click'}
+                            label={isRtl ? 'تفعيل دفتر الخاتا' : 'Enable Khata Tab'}
+                            subLabel={isRtl ? 'انقر للتفعيل' : 'Click to toggle credit'}
                             pulseColor="amber"
                             hintPosition="left"
                             onClick={() => {
@@ -1103,9 +1084,9 @@ export const InteractiveDemoSection: React.FC<InteractiveDemoSectionProps> = ({
                       {guidedStep === 4 && (
                         <div className="absolute -top-3 right-4 z-40">
                           <GesturePointer
-                            actionText={isRtl ? 'انقر هنا' : 'CLICK HERE'}
-                            label={isRtl ? 'أرسل المندوب أحمد لرحلة المصعد (طابق ١٤)' : 'Dispatch Runner to Elevator (Floor 14)'}
-                            subLabel={isRtl ? 'انقر هنا لتجميع ٣ طلبات وتفويج المندوب' : 'Click here to batch 3 orders in 1 runner trip'}
+                            actionText={isRtl ? 'انقر' : 'click'}
+                            label={isRtl ? 'تفويج المندوب أحمد' : 'Dispatch Runner'}
+                            subLabel={isRtl ? 'انقر للتفويج' : 'Click to batch dispatch'}
                             pulseColor="emerald"
                             hintPosition="bottom"
                             onClick={() => {
@@ -1532,7 +1513,7 @@ export const InteractiveDemoSection: React.FC<InteractiveDemoSectionProps> = ({
                           {guidedStep === 5 && (
                             <div className="absolute -top-3 right-4 z-40">
                               <GesturePointer
-                                actionText={isRtl ? 'انقر هنا' : 'CLICK HERE'}
+                                actionText={isRtl ? 'انقر' : 'click'}
                                 label={isRtl ? 'احسب الفكة واستلم ١٠٠ درهم' : 'Tender 100 AED & Compute Change'}
                                 subLabel={isRtl ? 'انقر هنا لحساب فكة ١٢.٥٠ درهم فورياً' : 'Click here to compute 12.50 AED change'}
                                 pulseColor="amber"
@@ -1544,9 +1525,11 @@ export const InteractiveDemoSection: React.FC<InteractiveDemoSectionProps> = ({
                                     setRiderScreen(4);
                                     showToast(isRtl ? 'تم إرسال إيصال واتساب للعميل بنجاح!' : 'WhatsApp receipt sent to resident!');
                                     setTimeout(() => {
-                                      setGuidedStep(6);
-                                      setActivePersona('admin');
-                                    }, 1400);
+                                      setGuidedStep(1);
+                                      setActivePersona('customer');
+                                      setCustomerScreen(1);
+                                      setSelectedCategory('offers');
+                                    }, 2000);
                                   }, 1000);
                                 }}
                               />
@@ -1597,9 +1580,11 @@ export const InteractiveDemoSection: React.FC<InteractiveDemoSectionProps> = ({
                         setRiderScreen(4);
                         if (guidedStep === 5) {
                           setTimeout(() => {
-                            setGuidedStep(6);
-                            setActivePersona('admin');
-                          }, 1200);
+                            setGuidedStep(1);
+                            setActivePersona('customer');
+                            setCustomerScreen(1);
+                            setSelectedCategory('offers');
+                          }, 2000);
                         }
                       }}
                       className={`w-full py-2.5 rounded-xl font-black text-xs flex items-center justify-center gap-2 shadow-lg ${
@@ -1696,254 +1681,8 @@ export const InteractiveDemoSection: React.FC<InteractiveDemoSectionProps> = ({
           </motion.div>
         )}
 
-        {/* =========================================================================
-            TAB 4: SUPERADMIN GLOBAL PULSE COCKPIT
-            ========================================================================= */}
-        {activePersona === 'admin' && (
-          <motion.div
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35 }}
-            className="space-y-6"
-          >
-            {/* Desktop Cockpit Card */}
-            <div className="max-w-6xl mx-auto bg-slate-900/90 border border-slate-800 rounded-3xl p-5 sm:p-7 shadow-2xl space-y-6">
-              
-              {/* Header Bar */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                    <Building2 className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h3 className="font-black text-white text-base sm:text-lg">
-                      ElShop Superadmin Global Pulse Dashboard
-                    </h3>
-                    <div className="text-xs text-slate-400">
-                      UAE Baqala Network Telemetry • Live WebSocket Synchronization
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 relative">
-                  {/* Guided Gesture on Step 6 for Superadmin broadcast */}
-                  {guidedStep === 6 && (
-                    <div className="absolute -top-12 right-0 z-40">
-                      <GesturePointer
-                        actionText={isRtl ? 'انقر هنا' : 'CLICK HERE'}
-                        label={isRtl ? 'أرسل تعميماً لكافة شاشات الكاشير (٢٤ متجراً)' : 'Broadcast Live Alert to 24 POS Tablets'}
-                        subLabel={isRtl ? 'انقر هنا لتجربة البث الشبكي الفوري' : 'Click here to test instant WebSocket network broadcast'}
-                        pulseColor="sky"
-                        hintPosition="top"
-                        onClick={() => {
-                          setShowBroadcastModal(true);
-                          showToast(isRtl ? 'فتح نافذة البث الشبكي' : 'Opened Network Broadcast Console');
-                        }}
-                      />
-                    </div>
-                  )}
-
-                  <button
-                    onClick={() => setShowBroadcastModal(true)}
-                    className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow active:scale-95"
-                  >
-                    <Send className="w-3.5 h-3.5" />
-                    <span>Broadcast Network Notice</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* 4 KPI Metric Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">Active Stores</span>
-                  <div className="text-2xl font-black text-white flex items-center gap-2">
-                    <span>24</span>
-                    <span className="text-[11px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded">100% Online</span>
-                  </div>
-                  <div className="text-[10px] text-slate-500">Across 8 Dubai residential clusters</div>
-                </div>
-
-                <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">Orders Today</span>
-                  <div className="text-2xl font-black text-white flex items-center gap-2">
-                    <span>1,547</span>
-                    <span className="text-[11px] text-sky-400 font-bold bg-sky-500/10 px-2 py-0.5 rounded">+18% vs avg</span>
-                  </div>
-                  <div className="text-[10px] text-slate-500">Avg 11.4 min delivery speed</div>
-                </div>
-
-                <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">Network GMV (30-Day)</span>
-                  <div className="text-2xl font-black text-emerald-400 font-mono">42,300 AED</div>
-                  <div className="text-[10px] text-slate-500">Zero commission taken from stores</div>
-                </div>
-
-                <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">Fulfillment Rate</span>
-                  <div className="text-2xl font-black text-white flex items-center gap-2">
-                    <span>94.8%</span>
-                    <span className="text-[11px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded">Elite</span>
-                  </div>
-                  <div className="text-[10px] text-slate-500">Zero lost or disputed items</div>
-                </div>
-              </div>
-
-              {/* Network Store Table */}
-              <div className="space-y-3">
-                <div className="flex justify-between items-center text-xs">
-                  <span className="font-bold text-white">Network Store Status &amp; Khata Exposure</span>
-                  <span className="text-slate-400 text-[11px]">Click any store for audit details</span>
-                </div>
-
-                <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950">
-                  <table className="w-full text-left text-xs">
-                    <thead>
-                      <tr className="border-b border-slate-800 text-[10px] text-slate-400 uppercase bg-slate-900/60">
-                        <th className="p-3">Store Name</th>
-                        <th className="p-3">Plan</th>
-                        <th className="p-3">Orders Today</th>
-                        <th className="p-3">Monthly GMV</th>
-                        <th className="p-3">Khata Exposure</th>
-                        <th className="p-3">SaaS Status</th>
-                        <th className="p-3 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-800/60">
-                      <tr className="hover:bg-slate-900/60 transition">
-                        <td className="p-3 font-bold text-white">Baqala Al-Rawabi (Marina)</td>
-                        <td className="p-3 text-slate-300">Tier 2 (599 AED)</td>
-                        <td className="p-3 font-mono font-bold text-white">45 orders</td>
-                        <td className="p-3 font-mono text-emerald-400 font-bold">12,500 AED</td>
-                        <td className="p-3 font-mono text-amber-400 font-bold">450 AED</td>
-                        <td className="p-3">
-                          <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">
-                            ✓ Paid
-                          </span>
-                        </td>
-                        <td className="p-3 text-right">
-                          <button
-                            onClick={() => showToast('Audit report dispatched for Al-Rawabi')}
-                            className="px-2.5 py-1 rounded bg-slate-800 text-slate-300 hover:text-white text-[10px] font-bold"
-                          >
-                            Audit
-                          </button>
-                        </td>
-                      </tr>
-
-                      <tr className="hover:bg-slate-900/60 transition bg-amber-500/5">
-                        <td className="p-3 font-bold text-white">Mart Bay Square (Business Bay)</td>
-                        <td className="p-3 text-slate-300">Tier 1 (299 AED)</td>
-                        <td className="p-3 font-mono font-bold text-white">78 orders</td>
-                        <td className="p-3 font-mono text-emerald-400 font-bold">18,900 AED</td>
-                        <td className="p-3 font-mono text-amber-400 font-bold">1,200 AED</td>
-                        <td className="p-3">
-                          <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-bold animate-pulse">
-                            ⚠️ Overdue (2d)
-                          </span>
-                        </td>
-                        <td className="p-3 text-right">
-                          <button
-                            onClick={() => showToast('Dispatched automated payment reminder via WhatsApp')}
-                            className="px-2.5 py-1 rounded bg-amber-600 hover:bg-amber-500 text-black text-[10px] font-black"
-                          >
-                            Send Reminder
-                          </button>
-                        </td>
-                      </tr>
-
-                      <tr className="hover:bg-slate-900/60 transition">
-                        <td className="p-3 font-bold text-white">Supermarket Khan (JLT Cl. D)</td>
-                        <td className="p-3 text-slate-300">Tier 3 (899 AED)</td>
-                        <td className="p-3 font-mono font-bold text-white">156 orders</td>
-                        <td className="p-3 font-mono text-emerald-400 font-bold">42,300 AED</td>
-                        <td className="p-3 font-mono text-amber-400 font-bold">8,500 AED</td>
-                        <td className="p-3">
-                          <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">
-                            ✓ Paid
-                          </span>
-                        </td>
-                        <td className="p-3 text-right">
-                          <button
-                            onClick={() => showToast('Audit report dispatched for Supermarket Khan')}
-                            className="px-2.5 py-1 rounded bg-slate-800 text-slate-300 hover:text-white text-[10px] font-bold"
-                          >
-                            Audit
-                          </button>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Guided Tour Completion Banner */}
-              <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-950/40 via-slate-900 to-amber-950/30 border border-emerald-500/30 flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center text-lg shrink-0">
-                    🎉
-                  </div>
-                  <div>
-                    <h5 className="font-black text-sm text-white">
-                      {isRtl ? 'اكتملت الجولة الإرشادية لـ ElShop!' : 'Interactive Tour Complete!'}
-                    </h5>
-                    <p className="text-xs text-slate-300">
-                      {isRtl
-                        ? 'شاهدت المتجر الرقمي والعروض، الدفتر الشهري، شاشة الكاشير، توصيل المندوب، والإدارة المركزية.'
-                        : 'You explored Special Offers, Khata Credit Tab, POS Elevator Batching, Rider Doorstep, & Superadmin.'}
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => handleSelectGuidedStep(1)}
-                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs flex items-center gap-2 shadow-lg transition active:scale-95 shrink-0"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  <span>{isRtl ? 'إعادة تشغيل الجولة من البداية' : 'Restart Tour from Step 1'}</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Broadcast Modal */}
-            {showBroadcastModal && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-                <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4 shadow-2xl">
-                  <div className="flex justify-between items-center pb-2 border-b border-slate-800">
-                    <h4 className="font-black text-white text-sm">Send Broadcast to 24 Stores</h4>
-                    <button
-                      onClick={() => setShowBroadcastModal(false)}
-                      className="text-slate-400 hover:text-white text-xs font-bold"
-                    >
-                      Close
-                    </button>
-                  </div>
-                  <p className="text-xs text-slate-300">
-                    Push an instant announcement banner to all merchant POS tablets across the UAE.
-                  </p>
-                  <textarea
-                    defaultValue="Scheduled system optimization tonight at 03:00 AM GST. Offline mode will cache all orders automatically."
-                    rows={3}
-                    className="w-full p-3 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus:outline-none focus:border-emerald-500"
-                  />
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => {
-                        showToast('Broadcast dispatched to 24 stores');
-                        setShowBroadcastModal(false);
-                      }}
-                      className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs"
-                    >
-                      Dispatch Broadcast Now
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </motion.div>
-        )}
-
       </div>
     </section>
   );
 };
+

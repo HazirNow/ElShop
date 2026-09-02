@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+:root {
+  --demo-font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+}
+
 @layer base {
   html {
     scroll-behavior: smooth;
@@ -8,6 +12,7 @@
     -moz-osx-font-smoothing: grayscale;
   }
 }
+
 
 /* Standout cursive L styling for ElShop branding - straight, upright, bold and prominent */
 .font-cursive-l {

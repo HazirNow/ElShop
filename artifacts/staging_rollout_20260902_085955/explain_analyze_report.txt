@@ -1,0 +1,26 @@
+-- 1. Index Existence Verification
+SELECT tablename, indexname FROM pg_indexes 
+WHERE tablename IN ('orders', 'products', 'khata_transactions', 'stores')
+ORDER BY tablename, indexname;
+
+-- 2. getSuperadminPulseSummaryInDb Query Verification
+EXPLAIN ANALYZE 
+SELECT store_id, 
+       COUNT(*) AS total_orders, 
+       COUNT(CASE WHEN status = 'delivered' THEN 1 END) AS delivered_orders,
+       COUNT(CASE WHEN status IN ('placed', 'packing', 'out_for_delivery') THEN 1 END) AS active_orders,
+       COALESCE(SUM(CASE WHEN status = 'delivered' THEN total ELSE 0 END), 0) AS total_revenue,
+       COUNT(DISTINCT customer_id) AS unique_customers
+FROM orders 
+GROUP BY store_id;
+
+-- 3. getBatchedRunsByBuildingInDb Query Verification
+EXPLAIN ANALYZE 
+SELECT * FROM orders 
+WHERE status IN ('placed', 'packing', 'out_for_delivery') 
+ORDER BY building;
+
+-- 4. Customer Khata Ledger Balance Query Verification
+EXPLAIN ANALYZE 
+SELECT type, amount FROM khata_transactions 
+WHERE customer_id = 'cust-001';
