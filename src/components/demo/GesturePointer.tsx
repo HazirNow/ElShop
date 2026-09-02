@@ -20,13 +20,6 @@ export const GesturePointer: React.FC<GesturePointerProps> = ({
   className = '',
   actionText
 }) => {
-  const posClasses = {
-    top: 'bottom-full mb-1.5 left-1/2 -translate-x-1/2',
-    bottom: 'top-full mt-1.5 left-1/2 -translate-x-1/2',
-    left: 'right-full mr-1.5 top-1/2 -translate-y-1/2',
-    right: 'left-full ml-1.5 top-1/2 -translate-y-1/2'
-  };
-
   const displayText = actionText || label || 'click';
 
   return (
@@ -34,33 +27,29 @@ export const GesturePointer: React.FC<GesturePointerProps> = ({
       onClick={onClick}
       role="button"
       tabIndex={0}
-      className={`relative inline-flex items-center justify-center cursor-pointer pointer-events-auto select-none z-50 group ${className}`}
+      className={`pointer-events-none select-none flex flex-col items-center justify-center z-30 transition-all ${className}`}
     >
-      {/* Subtle Red Fading Pulse Ring */}
+      {/* Subtle Red Fading Circle with Box-Shadow Pulsing Effect */}
       <motion.div
-        animate={{ scale: [0.9, 1.6, 2.0], opacity: [0.85, 0.35, 0] }}
-        transition={{ duration: 1.3, repeat: Infinity, ease: 'easeOut' }}
-        className="absolute w-7 h-7 rounded-full bg-red-500/40 pointer-events-none"
-      />
-
-      {/* Small Core Red Dot (24px) with subtle breathing */}
-      <motion.div
-        animate={{ scale: [0.94, 1.08, 0.94], opacity: [0.95, 1, 0.95] }}
-        transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
-        className="relative w-6 h-6 rounded-full bg-red-600 border border-white/90 shadow-[0_0_12px_rgba(220,38,38,0.7)] flex items-center justify-center text-white text-[10px] font-bold active:scale-80 transition-transform"
+        animate={{
+          boxShadow: [
+            '0 0 0 0px rgba(239, 68, 68, 0.75)',
+            '0 0 0 6px rgba(239, 68, 68, 0.3)',
+            '0 0 0 14px rgba(239, 68, 68, 0)'
+          ],
+          scale: [0.95, 1.05, 0.95],
+          opacity: [0.85, 1, 0.85]
+        }}
+        transition={{ duration: 1.5, repeat: Infinity, ease: 'easeOut' }}
+        className="w-3.5 h-3.5 rounded-full bg-red-500 border border-white/80 flex items-center justify-center shadow-sm"
       >
-        <span className="text-[10px] leading-none select-none">👆</span>
+        <span className="w-1 h-1 rounded-full bg-white" />
       </motion.div>
 
-      {/* Tiny Non-Obtrusive Tag: "click" / "انقر" */}
+      {/* Tiny Transparent 'click' / 'انقر' Label placed neatly under the clickable target */}
       {displayText && (
-        <div
-          className={`absolute ${posClasses[hintPosition]} pointer-events-none whitespace-nowrap z-50 transition-transform`}
-        >
-          <div className="px-1.5 py-0.5 rounded-full bg-slate-950/90 border border-red-500/40 text-white font-mono text-[9px] font-bold shadow-lg backdrop-blur-sm flex items-center gap-1">
-            <span className="w-1 h-1 rounded-full bg-red-500 animate-pulse" />
-            <span>{displayText}</span>
-          </div>
+        <div className="mt-1 px-1.5 py-0.5 rounded-md bg-red-950/40 border border-red-500/25 backdrop-blur-[2px] text-red-300 font-mono text-[9px] font-bold tracking-tight whitespace-nowrap shadow-sm">
+          {displayText}
         </div>
       )}
     </div>

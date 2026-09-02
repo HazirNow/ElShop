@@ -85,8 +85,8 @@ export const InteractiveDemoSection: React.FC<InteractiveDemoSectionProps> = ({
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [lastAddedId, setLastAddedId] = useState<string | null>(null);
 
-  // TAB 2: Merchant State
-  const [merchantTab, setMerchantTab] = useState<'kanban' | 'register' | 'inventory' | 'khata'>('kanban');
+  // TAB 2: Merchant State & Settings
+  const [merchantTab, setMerchantTab] = useState<'kanban' | 'register' | 'inventory' | 'khata' | 'settings'>('kanban');
   const [audioAlertEnabled, setAudioAlertEnabled] = useState<boolean>(true);
   const [selectedOrderModal, setSelectedOrderModal] = useState<any | null>(null);
   const [isPrintingReceipt, setIsPrintingReceipt] = useState<boolean>(false);
@@ -98,6 +98,42 @@ export const InteractiveDemoSection: React.FC<InteractiveDemoSectionProps> = ({
     'p-snack-3': 6,
     'p-pantry-1': 8
   });
+
+  // Merchant Display & Operational Controls
+  const [merchantSettings, setMerchantSettings] = useState({
+    showOffers: true,
+    enableKhata: true,
+    allowCashOnDelivery: true,
+    elevatorBatching: true,
+    audioNotifications: true,
+    whatsAppDirect: true,
+    lowStockWarnings: true,
+    sunlightModeRunner: true,
+    autoPrintReceipts: false,
+    minOrderAmount: 0
+  });
+
+  const handleToggleSetting = (key: keyof typeof merchantSettings) => {
+    setMerchantSettings((prev) => {
+      const nextVal = !prev[key];
+      const updated = { ...prev, [key]: nextVal };
+
+      if (key === 'audioNotifications') {
+        setAudioAlertEnabled(nextVal as boolean);
+      } else if (key === 'enableKhata') {
+        setPayLaterActive(nextVal as boolean);
+      } else if (key === 'sunlightModeRunner') {
+        setSunlightMode(nextVal as boolean);
+      }
+
+      showToast(
+        isRtl
+          ? `تم تحديث إعدادات المتجر بنجاح`
+          : `Setting updated: ${String(key)} (${nextVal ? 'ON' : 'OFF'})`
+      );
+      return updated;
+    });
+  };
 
   // TAB 3: Rider State
   const [riderScreen, setRiderScreen] = useState<1 | 2 | 3 | 4>(1);
@@ -485,48 +521,39 @@ export const InteractiveDemoSection: React.FC<InteractiveDemoSectionProps> = ({
                     <div className="relative shrink-0">
                       <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
                         {DEMO_CATEGORIES.map((cat) => (
-                          <button
-                            key={cat.id}
-                            onClick={() => {
-                              setSelectedCategory(cat.id);
-                              if (guidedStep === 2) {
-                                setGuidedStep(3);
-                              }
-                            }}
-                            className={`px-2.5 py-1 rounded-xl text-[10px] font-extrabold whitespace-nowrap flex items-center gap-1 border transition-all ${
-                              selectedCategory === cat.id
-                                ? 'bg-emerald-600 text-white border-emerald-400 shadow-sm'
-                                : cat.isSpecial
-                                ? 'bg-amber-500/10 text-amber-300 border-amber-500/30 hover:bg-amber-500/20'
-                                : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
-                            }`}
-                          >
-                            <span>{cat.icon}</span>
-                            <span>{isRtl ? cat.nameAr : cat.nameEn}</span>
-                          </button>
+                          <div key={cat.id} className="relative shrink-0">
+                            <button
+                              onClick={() => {
+                                setSelectedCategory(cat.id);
+                                if (guidedStep === 2 && cat.id === 'bakery') {
+                                  setGuidedStep(3);
+                                  setCustomerScreen(2);
+                                }
+                              }}
+                              className={`px-2.5 py-1 rounded-xl text-[10px] font-extrabold whitespace-nowrap flex items-center gap-1 border transition-all ${
+                                selectedCategory === cat.id
+                                  ? 'bg-emerald-600 text-white border-emerald-400 shadow-sm'
+                                  : cat.isSpecial
+                                  ? 'bg-amber-500/10 text-amber-300 border-amber-500/30 hover:bg-amber-500/20'
+                                  : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                              }`}
+                            >
+                              <span>{cat.icon}</span>
+                              <span>{isRtl ? cat.nameAr : cat.nameEn}</span>
+                            </button>
+
+                            {/* Guided Gesture for Category Switch (Step 2) positioned under bakery button */}
+                            {guidedStep === 2 && cat.id === 'bakery' && (
+                              <div className="absolute top-full mt-1 left-1/2 -translate-x-1/2 z-40">
+                                <GesturePointer
+                                  actionText={isRtl ? 'انقر' : 'click'}
+                                  hintPosition="bottom"
+                                />
+                              </div>
+                            )}
+                          </div>
                         ))}
                       </div>
-
-                      {/* Guided Gesture for Category Switch (Step 2) */}
-                      {guidedStep === 2 && (
-                        <div className="absolute -top-1 left-28 z-40">
-                          <GesturePointer
-                            actionText={isRtl ? 'انقر' : 'click'}
-                            label={isRtl ? 'تصفح المخبوزات' : 'Explore Bakery'}
-                            subLabel={isRtl ? 'تغيير الفئة' : 'Switch category'}
-                            pulseColor="sky"
-                            hintPosition="bottom"
-                            onClick={() => {
-                              setSelectedCategory('bakery');
-                              showToast(isRtl ? 'تم الانتقال للمخبوزات' : 'Browsing Bakery');
-                              setTimeout(() => {
-                                setGuidedStep(3);
-                                setCustomerScreen(2);
-                              }, 900);
-                            }}
-                          />
-                        </div>
-                      )}
                     </div>
 
                     {/* Special Offers Promotional Highlight Banner */}
@@ -568,20 +595,6 @@ export const InteractiveDemoSection: React.FC<InteractiveDemoSectionProps> = ({
                                 : ''
                             }`}
                           >
-                            {/* Guided Gesture for Add to Cart (Step 1) */}
-                            {guidedStep === 1 && isFirstOffer && (
-                              <div className="absolute right-4 top-1/2 -translate-y-1/2 z-40">
-                                <GesturePointer
-                                  actionText={isRtl ? 'انقر' : 'click'}
-                                  label={isRtl ? 'أضف عرض الفطور' : 'Add Breakfast Combo'}
-                                  subLabel={isRtl ? 'انقر للإضافة' : 'Click to add to cart'}
-                                  pulseColor="emerald"
-                                  hintPosition="left"
-                                  onClick={() => handleAddToCart(product)}
-                                />
-                              </div>
-                            )}
-
                             {/* Product Visual & Details */}
                             <div className="flex items-center gap-2.5 min-w-0 flex-1">
                               <div className="w-11 h-11 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center text-xl shrink-0 relative">
@@ -608,7 +621,7 @@ export const InteractiveDemoSection: React.FC<InteractiveDemoSectionProps> = ({
                                       SALE
                                     </span>
                                   )}
-                                  {product.lowStock && (
+                                  {merchantSettings.lowStockWarnings && product.lowStock && (
                                     <span className="text-[8px] font-black bg-amber-500/20 text-amber-300 px-1.5 py-0.2 rounded">
                                       {product.lowStock} left
                                     </span>
@@ -634,7 +647,17 @@ export const InteractiveDemoSection: React.FC<InteractiveDemoSectionProps> = ({
                             </div>
 
                             {/* Quantity Controls */}
-                            <div className="flex items-center gap-1 shrink-0">
+                            <div className="flex items-center gap-1 shrink-0 relative">
+                              {/* Guided Gesture for Add to Cart (Step 1) positioned under add button */}
+                              {guidedStep === 1 && isFirstOffer && inCartQty === 0 && (
+                                <div className="absolute top-full mt-1 right-1/2 translate-x-1/2 z-40">
+                                  <GesturePointer
+                                    actionText={isRtl ? 'انقر' : 'click'}
+                                    hintPosition="bottom"
+                                  />
+                                </div>
+                              )}
+
                               {inCartQty > 0 ? (
                                 <div className="flex items-center bg-slate-950 rounded-xl border border-slate-700 p-0.5">
                                   <button
@@ -745,28 +768,6 @@ export const InteractiveDemoSection: React.FC<InteractiveDemoSectionProps> = ({
 
                     {/* KHATA CREDIT LEDGER SWITCH (Step 3 Focus) */}
                     <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-2 relative">
-                      {/* Guided Gesture for Khata Toggle (Step 3) */}
-                      {guidedStep === 3 && (
-                        <div className="absolute right-6 top-2 z-40">
-                          <GesturePointer
-                            actionText={isRtl ? 'انقر' : 'click'}
-                            label={isRtl ? 'تفعيل دفتر الخاتا' : 'Enable Khata Tab'}
-                            subLabel={isRtl ? 'انقر للتفعيل' : 'Click to toggle credit'}
-                            pulseColor="amber"
-                            hintPosition="left"
-                            onClick={() => {
-                              setPayLaterActive(true);
-                              showToast(isRtl ? 'تم تفعيل دفتر الخاتا لسكان البرج!' : 'Resident Khata Credit Tab Enabled!');
-                              setTimeout(() => {
-                                setGuidedStep(4);
-                                setActivePersona('merchant');
-                                setMerchantTab('kanban');
-                              }, 1100);
-                            }}
-                          />
-                        </div>
-                      )}
-
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className="text-base">📒</span>
@@ -781,24 +782,36 @@ export const InteractiveDemoSection: React.FC<InteractiveDemoSectionProps> = ({
                         </div>
 
                         {/* Switch Toggle */}
-                        <button
-                          onClick={() => {
-                            setPayLaterActive(!payLaterActive);
-                            if (guidedStep === 3) {
-                              setGuidedStep(4);
-                              setActivePersona('merchant');
-                              setMerchantTab('kanban');
-                            }
-                          }}
-                          className={`w-11 h-6 rounded-full transition-colors relative p-0.5 ${
-                            payLaterActive ? 'bg-amber-500' : 'bg-slate-700'
-                          }`}
-                        >
-                          <motion.div
-                            animate={{ x: payLaterActive ? 20 : 0 }}
-                            className="w-5 h-5 rounded-full bg-slate-950 shadow-md"
-                          />
-                        </button>
+                        <div className="relative">
+                          <button
+                            onClick={() => {
+                              setPayLaterActive(!payLaterActive);
+                              if (guidedStep === 3) {
+                                setGuidedStep(4);
+                                setActivePersona('merchant');
+                                setMerchantTab('kanban');
+                              }
+                            }}
+                            className={`w-11 h-6 rounded-full transition-colors relative p-0.5 ${
+                              payLaterActive ? 'bg-amber-500' : 'bg-slate-700'
+                            }`}
+                          >
+                            <motion.div
+                              animate={{ x: payLaterActive ? 20 : 0 }}
+                              className="w-5 h-5 rounded-full bg-slate-950 shadow-md"
+                            />
+                          </button>
+
+                          {/* Guided Gesture for Khata Toggle (Step 3) positioned under switch */}
+                          {guidedStep === 3 && (
+                            <div className="absolute top-full mt-1 left-1/2 -translate-x-1/2 z-40">
+                              <GesturePointer
+                                actionText={isRtl ? 'انقر' : 'click'}
+                                hintPosition="bottom"
+                              />
+                            </div>
+                          )}
+                        </div>
                       </div>
 
                       {/* Khata Balance Meter */}
@@ -981,10 +994,10 @@ export const InteractiveDemoSection: React.FC<InteractiveDemoSectionProps> = ({
               storeName="Al Medina Supermarket (Marina Pinnacle)"
               terminalId="POS-01"
               headerControls={
-                <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+                <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs overflow-x-auto no-scrollbar">
                   <button
                     onClick={() => setMerchantTab('kanban')}
-                    className={`px-3 py-1 rounded-lg font-bold transition ${
+                    className={`px-2.5 py-1 rounded-lg font-bold transition whitespace-nowrap ${
                       merchantTab === 'kanban' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'
                     }`}
                   >
@@ -992,7 +1005,7 @@ export const InteractiveDemoSection: React.FC<InteractiveDemoSectionProps> = ({
                   </button>
                   <button
                     onClick={() => setMerchantTab('register')}
-                    className={`px-3 py-1 rounded-lg font-bold transition ${
+                    className={`px-2.5 py-1 rounded-lg font-bold transition whitespace-nowrap ${
                       merchantTab === 'register' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'
                     }`}
                   >
@@ -1000,7 +1013,7 @@ export const InteractiveDemoSection: React.FC<InteractiveDemoSectionProps> = ({
                   </button>
                   <button
                     onClick={() => setMerchantTab('inventory')}
-                    className={`px-3 py-1 rounded-lg font-bold transition ${
+                    className={`px-2.5 py-1 rounded-lg font-bold transition whitespace-nowrap ${
                       merchantTab === 'inventory' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'
                     }`}
                   >
@@ -1008,11 +1021,20 @@ export const InteractiveDemoSection: React.FC<InteractiveDemoSectionProps> = ({
                   </button>
                   <button
                     onClick={() => setMerchantTab('khata')}
-                    className={`px-3 py-1 rounded-lg font-bold transition ${
+                    className={`px-2.5 py-1 rounded-lg font-bold transition whitespace-nowrap ${
                       merchantTab === 'khata' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'
                     }`}
                   >
                     {isRtl ? 'دفتر الخاتا' : '4. Khata Ledger'}
+                  </button>
+                  <button
+                    onClick={() => setMerchantTab('settings')}
+                    className={`px-2.5 py-1 rounded-lg font-bold transition whitespace-nowrap flex items-center gap-1 ${
+                      merchantTab === 'settings' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Sliders className="w-3 h-3" />
+                    <span>{isRtl ? 'إعدادات العرض' : '5. Settings'}</span>
                   </button>
                 </div>
               }
@@ -1080,33 +1102,12 @@ export const InteractiveDemoSection: React.FC<InteractiveDemoSectionProps> = ({
 
                     {/* COL 2: PACKING / READY FOR RUNNER */}
                     <div className="bg-slate-900/90 rounded-2xl p-3 border border-slate-800 flex flex-col space-y-2 relative">
-                      {/* Guided Gesture on Step 4 */}
-                      {guidedStep === 4 && (
-                        <div className="absolute -top-3 right-4 z-40">
-                          <GesturePointer
-                            actionText={isRtl ? 'انقر' : 'click'}
-                            label={isRtl ? 'تفويج المندوب أحمد' : 'Dispatch Runner'}
-                            subLabel={isRtl ? 'انقر للتفويج' : 'Click to batch dispatch'}
-                            pulseColor="emerald"
-                            hintPosition="bottom"
-                            onClick={() => {
-                              showToast(isRtl ? 'تم إرسال المندوب أحمد لتوصيل الدفعة B-14!' : 'Runner Ahmed dispatched with Batch B-14!');
-                              setTimeout(() => {
-                                setGuidedStep(5);
-                                setActivePersona('rider');
-                                setRiderScreen(3);
-                              }, 1100);
-                            }}
-                          />
-                        </div>
-                      )}
-
                       <div className="flex justify-between items-center pb-2 border-b border-slate-800 text-xs font-black">
                         <span className="text-amber-400">Packed &amp; Staged (1)</span>
                         <Package className="w-3.5 h-3.5 text-amber-400" />
                       </div>
 
-                      <div className="p-2.5 rounded-xl bg-slate-950 border border-amber-500/40 space-y-2">
+                      <div className="p-2.5 rounded-xl bg-slate-950 border border-amber-500/40 space-y-2 relative">
                         <div className="flex justify-between items-center font-mono text-xs font-black">
                           <span className="text-white">Batch #B-14 (3 Stops)</span>
                           <span className="text-amber-400 font-mono">Floors 7, 14, 22</span>
@@ -1114,20 +1115,32 @@ export const InteractiveDemoSection: React.FC<InteractiveDemoSectionProps> = ({
                         <div className="text-[10px] text-slate-300">
                           Total 3 orders bagged in Thermal Tote A
                         </div>
-                        <button
-                          onClick={() => {
-                            showToast(isRtl ? 'تم إرسال المندوب أحمد لتوصيل الدفعة B-14!' : 'Runner Ahmed dispatched with Batch B-14!');
-                            if (guidedStep === 4) {
-                              setGuidedStep(5);
-                              setActivePersona('rider');
-                              setRiderScreen(3);
-                            }
-                          }}
-                          className="w-full py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-black text-[11px] flex items-center justify-center gap-1 shadow"
-                        >
-                          <Bike className="w-3 h-3" />
-                          <span>Dispatch Runner Ahmed ➔</span>
-                        </button>
+                        <div className="relative">
+                          <button
+                            onClick={() => {
+                              showToast(isRtl ? 'تم إرسال المندوب أحمد لتوصيل الدفعة B-14!' : 'Runner Ahmed dispatched with Batch B-14!');
+                              if (guidedStep === 4) {
+                                setGuidedStep(5);
+                                setActivePersona('rider');
+                                setRiderScreen(3);
+                              }
+                            }}
+                            className="w-full py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-black text-[11px] flex items-center justify-center gap-1 shadow"
+                          >
+                            <Bike className="w-3 h-3" />
+                            <span>Dispatch Runner Ahmed ➔</span>
+                          </button>
+
+                          {/* Guided Gesture on Step 4 positioned under button */}
+                          {guidedStep === 4 && (
+                            <div className="absolute top-full mt-1 left-1/2 -translate-x-1/2 z-40">
+                              <GesturePointer
+                                actionText={isRtl ? 'انقر' : 'click'}
+                                hintPosition="bottom"
+                              />
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -1347,6 +1360,272 @@ export const InteractiveDemoSection: React.FC<InteractiveDemoSectionProps> = ({
                   </div>
                 </div>
               )}
+
+              {/* TAB 2.5: MERCHANT DISPLAY & OPERATIONAL SETTINGS */}
+              {merchantTab === 'settings' && (
+                <div className="flex-1 space-y-3 overflow-y-auto no-scrollbar pr-0.5">
+                  <div className="flex justify-between items-center bg-slate-900/90 p-2.5 rounded-xl border border-slate-800">
+                    <div>
+                      <div className="font-black text-white text-xs flex items-center gap-1.5">
+                        <Sliders className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>{isRtl ? 'إعدادات عرض المتجر والتشغيل المباشر' : 'Store Display & Operational Controls'}</span>
+                      </div>
+                      <div className="text-[10px] text-slate-400">
+                        {isRtl ? 'التحكم بما يظهر للعملاء والمناديب وتخصيص الخصائص فورياً' : 'Toggle what is displayed to residents & runners in real-time'}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setMerchantSettings({
+                          showOffers: true,
+                          enableKhata: true,
+                          allowCashOnDelivery: true,
+                          elevatorBatching: true,
+                          audioNotifications: true,
+                          whatsAppDirect: true,
+                          lowStockWarnings: true,
+                          sunlightModeRunner: true,
+                          autoPrintReceipts: false,
+                          minOrderAmount: 0
+                        });
+                        showToast(isRtl ? 'تمت استعادة الإعدادات الافتراضية' : 'Reset to default settings');
+                      }}
+                      className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold border border-slate-700"
+                    >
+                      {isRtl ? 'استعادة الافتراضي' : 'Reset Defaults'}
+                    </button>
+                  </div>
+
+                  {/* Toggle Switch Cards Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    {/* 1. Show Offers */}
+                    <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800/90 flex items-center justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-bold text-white text-[11px] truncate flex items-center gap-1">
+                          <span>🔥</span>
+                          <span>{isRtl ? 'عرض العروض والخصومات الترويجية' : 'Display Special Offers & Deals'}</span>
+                        </div>
+                        <div className="text-[9px] text-slate-400 truncate">
+                          {isRtl ? 'إظهار شريط وبطاقات باقات التوفير للعميل' : 'Show discount bundles on customer catalogue'}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleToggleSetting('showOffers')}
+                        className={`w-10 h-5 rounded-full transition-colors relative p-0.5 shrink-0 ${
+                          merchantSettings.showOffers ? 'bg-emerald-500' : 'bg-slate-700'
+                        }`}
+                      >
+                        <motion.div
+                          animate={{ x: merchantSettings.showOffers ? 20 : 0 }}
+                          className="w-4 h-4 rounded-full bg-slate-950 shadow"
+                        />
+                      </button>
+                    </div>
+
+                    {/* 2. Monthly Khata Tab */}
+                    <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800/90 flex items-center justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-bold text-white text-[11px] truncate flex items-center gap-1">
+                          <span>📒</span>
+                          <span>{isRtl ? 'تفعيل دفتر الخاتا (الدفع المؤجل)' : 'Enable Monthly Khata Tab'}</span>
+                        </div>
+                        <div className="text-[9px] text-slate-400 truncate">
+                          {isRtl ? 'السماح لسكان البرج بالشراء وسداد الحساب شهرياً' : 'Allow verified tower residents to charge to ledger'}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleToggleSetting('enableKhata')}
+                        className={`w-10 h-5 rounded-full transition-colors relative p-0.5 shrink-0 ${
+                          merchantSettings.enableKhata ? 'bg-amber-500' : 'bg-slate-700'
+                        }`}
+                      >
+                        <motion.div
+                          animate={{ x: merchantSettings.enableKhata ? 20 : 0 }}
+                          className="w-4 h-4 rounded-full bg-slate-950 shadow"
+                        />
+                      </button>
+                    </div>
+
+                    {/* 3. Cash on Delivery */}
+                    <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800/90 flex items-center justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-bold text-white text-[11px] truncate flex items-center gap-1">
+                          <span>💵</span>
+                          <span>{isRtl ? 'الدفع النقدي وحساب الفكة عند الباب' : 'Doorstep Cash on Delivery (COD)'}</span>
+                        </div>
+                        <div className="text-[9px] text-slate-400 truncate">
+                          {isRtl ? 'تمكين خيار الكاش مع حاسبة الفكة الفورية' : 'Enable cash payment with instant change calc'}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleToggleSetting('allowCashOnDelivery')}
+                        className={`w-10 h-5 rounded-full transition-colors relative p-0.5 shrink-0 ${
+                          merchantSettings.allowCashOnDelivery ? 'bg-emerald-500' : 'bg-slate-700'
+                        }`}
+                      >
+                        <motion.div
+                          animate={{ x: merchantSettings.allowCashOnDelivery ? 20 : 0 }}
+                          className="w-4 h-4 rounded-full bg-slate-950 shadow"
+                        />
+                      </button>
+                    </div>
+
+                    {/* 4. Elevator Batching */}
+                    <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800/90 flex items-center justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-bold text-white text-[11px] truncate flex items-center gap-1">
+                          <span>🛗</span>
+                          <span>{isRtl ? 'تجميع رحلات المصاعد الذكي' : 'Smart Elevator Run Batching'}</span>
+                        </div>
+                        <div className="text-[9px] text-slate-400 truncate">
+                          {isRtl ? 'تجميع طلبات الطوابق في رحلة مصعد واحدة' : 'Auto-batch 3-4 orders per courier trip'}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleToggleSetting('elevatorBatching')}
+                        className={`w-10 h-5 rounded-full transition-colors relative p-0.5 shrink-0 ${
+                          merchantSettings.elevatorBatching ? 'bg-emerald-500' : 'bg-slate-700'
+                        }`}
+                      >
+                        <motion.div
+                          animate={{ x: merchantSettings.elevatorBatching ? 20 : 0 }}
+                          className="w-4 h-4 rounded-full bg-slate-950 shadow"
+                        />
+                      </button>
+                    </div>
+
+                    {/* 5. Audio Chime */}
+                    <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800/90 flex items-center justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-bold text-white text-[11px] truncate flex items-center gap-1">
+                          <span>🔔</span>
+                          <span>{isRtl ? 'جرس التنبيه الصوتي للطلبات' : 'New Order Audio Chime'}</span>
+                        </div>
+                        <div className="text-[9px] text-slate-400 truncate">
+                          {isRtl ? 'صوت تنبيه عند استلام طلب واتساب جديد' : 'Play loud chime on tablet when order arrives'}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleToggleSetting('audioNotifications')}
+                        className={`w-10 h-5 rounded-full transition-colors relative p-0.5 shrink-0 ${
+                          merchantSettings.audioNotifications ? 'bg-emerald-500' : 'bg-slate-700'
+                        }`}
+                      >
+                        <motion.div
+                          animate={{ x: merchantSettings.audioNotifications ? 20 : 0 }}
+                          className="w-4 h-4 rounded-full bg-slate-950 shadow"
+                        />
+                      </button>
+                    </div>
+
+                    {/* 6. WhatsApp Direct */}
+                    <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800/90 flex items-center justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-bold text-white text-[11px] truncate flex items-center gap-1">
+                          <span>💬</span>
+                          <span>{isRtl ? 'زر الطلب السريع عبر واتساب' : 'WhatsApp Direct Order Button'}</span>
+                        </div>
+                        <div className="text-[9px] text-slate-400 truncate">
+                          {isRtl ? 'إظهار زر الدردشة العائم في قائمة العميل' : 'Show floating WhatsApp chat in resident menu'}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleToggleSetting('whatsAppDirect')}
+                        className={`w-10 h-5 rounded-full transition-colors relative p-0.5 shrink-0 ${
+                          merchantSettings.whatsAppDirect ? 'bg-emerald-500' : 'bg-slate-700'
+                        }`}
+                      >
+                        <motion.div
+                          animate={{ x: merchantSettings.whatsAppDirect ? 20 : 0 }}
+                          className="w-4 h-4 rounded-full bg-slate-950 shadow"
+                        />
+                      </button>
+                    </div>
+
+                    {/* 7. Low Stock Warnings */}
+                    <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800/90 flex items-center justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-bold text-white text-[11px] truncate flex items-center gap-1">
+                          <span>⚠️</span>
+                          <span>{isRtl ? 'تنبيهات نفاد المخزون' : 'Low Stock & Expiry Badges'}</span>
+                        </div>
+                        <div className="text-[9px] text-slate-400 truncate">
+                          {isRtl ? 'إبراز الأصناف ذات المخزون الأقل من ١٠' : 'Show low stock tags on items under 10 units'}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleToggleSetting('lowStockWarnings')}
+                        className={`w-10 h-5 rounded-full transition-colors relative p-0.5 shrink-0 ${
+                          merchantSettings.lowStockWarnings ? 'bg-emerald-500' : 'bg-slate-700'
+                        }`}
+                      >
+                        <motion.div
+                          animate={{ x: merchantSettings.lowStockWarnings ? 20 : 0 }}
+                          className="w-4 h-4 rounded-full bg-slate-950 shadow"
+                        />
+                      </button>
+                    </div>
+
+                    {/* 8. Sunlight Mode Runner */}
+                    <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800/90 flex items-center justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-bold text-white text-[11px] truncate flex items-center gap-1">
+                          <span>☀️</span>
+                          <span>{isRtl ? 'وضع الشمس للمندوب (٤٥° م)' : 'Runner Sunlight Mode'}</span>
+                        </div>
+                        <div className="text-[9px] text-slate-400 truncate">
+                          {isRtl ? 'تمكين التباين الفائق لراحة المندوب بالحر' : 'High-contrast bright UI for couriers'}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleToggleSetting('sunlightModeRunner')}
+                        className={`w-10 h-5 rounded-full transition-colors relative p-0.5 shrink-0 ${
+                          merchantSettings.sunlightModeRunner ? 'bg-amber-500' : 'bg-slate-700'
+                        }`}
+                      >
+                        <motion.div
+                          animate={{ x: merchantSettings.sunlightModeRunner ? 20 : 0 }}
+                          className="w-4 h-4 rounded-full bg-slate-950 shadow"
+                        />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Minimum Order Amount Threshold */}
+                  <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between">
+                    <div>
+                      <div className="font-bold text-white text-[11px]">
+                        {isRtl ? 'الحد الأدنى للطلب (درهم إماراتي)' : 'Minimum Order Threshold'}
+                      </div>
+                      <div className="text-[9px] text-slate-400">
+                        {isRtl ? 'تحديد قيمة الطلب الأدنى للتوصيل المجاني للبرج' : 'Free delivery threshold for residential towers'}
+                      </div>
+                    </div>
+                    <div className="flex gap-1">
+                      {[0, 15, 30].map((val) => (
+                        <button
+                          key={val}
+                          onClick={() => {
+                            setMerchantSettings((prev) => ({ ...prev, minOrderAmount: val }));
+                            showToast(
+                              isRtl
+                                ? `تم ضبط الحد الأدنى: ${val === 0 ? 'بدون حد' : `${val} درهم`}`
+                                : `Min order set to ${val} AED`
+                            );
+                          }}
+                          className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition ${
+                            merchantSettings.minOrderAmount === val
+                              ? 'bg-emerald-600 text-white border-emerald-400'
+                              : 'bg-slate-900 text-slate-400 border-slate-800'
+                          }`}
+                        >
+                          {val === 0 ? (isRtl ? 'بدون حد' : '0 AED') : `${val} AED`}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </DeviceTabletFrame>
           </motion.div>
         )}
@@ -1509,51 +1788,45 @@ export const InteractiveDemoSection: React.FC<InteractiveDemoSectionProps> = ({
                       {/* Cash Tender Calculation Box */}
                       {paymentMode === 'cash' ? (
                         <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800 space-y-2 relative">
-                          {/* Guided Gesture on Step 5 for Cash Change calculation */}
-                          {guidedStep === 5 && (
-                            <div className="absolute -top-3 right-4 z-40">
-                              <GesturePointer
-                                actionText={isRtl ? 'انقر' : 'click'}
-                                label={isRtl ? 'حساب الفكة (استلام ١٠٠ درهم)' : 'Tender 100 AED & Compute Change'}
-                                subLabel={isRtl ? 'احسب الفكة' : 'Compute change'}
-                                pulseColor="amber"
-                                hintPosition="bottom"
-                                onClick={() => {
-                                  setTenderedAmount(100);
-                                  showToast(isRtl ? 'تم حساب الفكة: إرجاع ١٢.٥٠ درهم للمشتري' : 'Change computed: Return 12.50 AED to customer');
-                                  setTimeout(() => {
-                                    setRiderScreen(4);
-                                    showToast(isRtl ? 'تم إرسال إيصال واتساب للعميل بنجاح!' : 'WhatsApp receipt sent to resident!');
-                                    setTimeout(() => {
-                                      setGuidedStep(1);
-                                      setActivePersona('customer');
-                                      setCustomerScreen(1);
-                                      setSelectedCategory('offers');
-                                    }, 2000);
-                                  }, 1000);
-                                }}
-                              />
-                            </div>
-                          )}
-
-                          <div className="flex justify-between text-[11px] font-bold">
-                            <span>Amount Tendered:</span>
-                            <span className="font-mono text-white text-xs">{tenderedAmount}.00 AED</span>
-                          </div>
-
-                          <div className="flex gap-1.5">
+                          <div className="flex gap-1.5 pb-2">
                             {[87.5, 100, 200].map((amt) => (
-                              <button
-                                key={amt}
-                                onClick={() => setTenderedAmount(amt)}
-                                className={`flex-1 py-1 rounded-lg text-[10px] font-bold border transition ${
-                                  tenderedAmount === amt
-                                    ? 'bg-amber-400 text-black border-amber-300 font-black'
-                                    : 'bg-slate-900 text-slate-300 border-slate-700'
-                                }`}
-                              >
-                                {amt === 87.5 ? 'Exact' : `${amt} AED`}
-                              </button>
+                              <div key={amt} className="flex-1 relative">
+                                <button
+                                  onClick={() => {
+                                    setTenderedAmount(amt);
+                                    if (guidedStep === 5 && amt === 100) {
+                                      showToast(isRtl ? 'تم حساب الفكة: إرجاع ١٢.٥٠ درهم للمشتري' : 'Change computed: Return 12.50 AED to customer');
+                                      setTimeout(() => {
+                                        setRiderScreen(4);
+                                        showToast(isRtl ? 'تم إرسال إيصال واتساب للعميل بنجاح!' : 'WhatsApp receipt sent to resident!');
+                                        setTimeout(() => {
+                                          setGuidedStep(1);
+                                          setActivePersona('customer');
+                                          setCustomerScreen(1);
+                                          setSelectedCategory('offers');
+                                        }, 2000);
+                                      }, 1000);
+                                    }
+                                  }}
+                                  className={`w-full py-1 rounded-lg text-[10px] font-bold border transition ${
+                                    tenderedAmount === amt
+                                      ? 'bg-amber-400 text-black border-amber-300 font-black'
+                                      : 'bg-slate-900 text-slate-300 border-slate-700'
+                                  }`}
+                                >
+                                  {amt === 87.5 ? 'Exact' : `${amt} AED`}
+                                </button>
+
+                                {/* Guided Gesture on Step 5 positioned under 100 AED button */}
+                                {guidedStep === 5 && amt === 100 && (
+                                  <div className="absolute top-full mt-1 left-1/2 -translate-x-1/2 z-40">
+                                    <GesturePointer
+                                      actionText={isRtl ? 'انقر' : 'click'}
+                                      hintPosition="bottom"
+                                    />
+                                  </div>
+                                )}
+                              </div>
                             ))}
                           </div>
 
