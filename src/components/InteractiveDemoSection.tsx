@@ -228,7 +228,7 @@ export const InteractiveDemoSection: React.FC<InteractiveDemoSectionProps> = ({
   });
 
   return (
-    <section id="demo" className="py-16 sm:py-24 bg-slate-950 relative overflow-hidden border-t border-slate-800/80">
+    <section id="demo" className="py-16 sm:py-24 bg-slate-950 relative overflow-hidden border-t border-slate-800/80 font-demo">
       {/* Background glow accents */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[900px] h-[450px] bg-emerald-600/10 blur-[130px] rounded-full pointer-events-none" />
       <div className="absolute bottom-10 right-10 w-[600px] h-[350px] bg-amber-500/10 blur-[120px] rounded-full pointer-events-none" />
@@ -513,7 +513,7 @@ export const InteractiveDemoSection: React.FC<InteractiveDemoSectionProps> = ({
                           <GesturePointer
                             actionText={isRtl ? 'انقر' : 'click'}
                             label={isRtl ? 'تصفح المخبوزات' : 'Explore Bakery'}
-                            subLabel={isRtl ? 'انقر هنا للتبديل' : 'Click to switch'}
+                            subLabel={isRtl ? 'تغيير الفئة' : 'Switch category'}
                             pulseColor="sky"
                             hintPosition="bottom"
                             onClick={() => {
@@ -674,9 +674,9 @@ export const InteractiveDemoSection: React.FC<InteractiveDemoSectionProps> = ({
                       {guidedStep === 3 && customerScreen === 1 && (
                         <div className="absolute -top-12 left-1/2 -translate-x-1/2 z-40">
                           <GesturePointer
-                            actionText={isRtl ? 'انقر هنا' : 'CLICK HERE'}
-                            label={isRtl ? 'انتقل لسلة المشتريات والدفتر' : 'Review Cart & Khata Tab'}
-                            subLabel={isRtl ? 'انقر هنا لمراجعة الحساب وتفعيل الدفتر' : 'Click here to review items & credit tab'}
+                            actionText={isRtl ? 'انقر' : 'click'}
+                            label={isRtl ? 'متابعة الدفع والدفتر' : 'Review Cart & Khata'}
+                            subLabel={isRtl ? 'فتح السلة' : 'Open cart'}
                             pulseColor="amber"
                             hintPosition="top"
                             onClick={() => setCustomerScreen(2)}
@@ -1514,8 +1514,8 @@ export const InteractiveDemoSection: React.FC<InteractiveDemoSectionProps> = ({
                             <div className="absolute -top-3 right-4 z-40">
                               <GesturePointer
                                 actionText={isRtl ? 'انقر' : 'click'}
-                                label={isRtl ? 'احسب الفكة واستلم ١٠٠ درهم' : 'Tender 100 AED & Compute Change'}
-                                subLabel={isRtl ? 'انقر هنا لحساب فكة ١٢.٥٠ درهم فورياً' : 'Click here to compute 12.50 AED change'}
+                                label={isRtl ? 'حساب الفكة (استلام ١٠٠ درهم)' : 'Tender 100 AED & Compute Change'}
+                                subLabel={isRtl ? 'احسب الفكة' : 'Compute change'}
                                 pulseColor="amber"
                                 hintPosition="bottom"
                                 onClick={() => {
