@@ -34,7 +34,10 @@ STAGE_USER="${STAGE_USER:-postgres}"
 STAGE_DB="${STAGE_DB:-elshop_staging}"
 DB_PASS="${DB_PASS:-${PGPASSWORD:-}}"
 STAGE_URL="${STAGE_URL:-http://localhost:3000}"
-SUPERADMIN_SECRET="${SUPERADMIN_SECRET:-hazirnow_pilot_secret_2026}"
+if [[ -z "${SUPERADMIN_SECRET:-}" ]]; then
+  echo "❌ Error: SUPERADMIN_SECRET environment variable is required and must be set." >&2
+  exit 1
+fi
 
 export PGPASSWORD="${DB_PASS}"
 

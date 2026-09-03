@@ -2,10 +2,13 @@
  * Tenant Isolation & Ledger Scoping Verification Script
  * 
  * Verifies that:
- * 1. Store authentication correctly scopes merchant access by PIN.
- * 2. State and ledger queries filtered by storeId return strictly store-scoped
- *    data without cross-tenant leakage of orders, products, or khata transactions.
- * 3. An authenticated store cannot access or mutate another store's transactions.
+ * 1. Store authentication correctly scopes merchant access by PIN and issues a signed session token.
+ * 2. Unauthenticated write requests are rejected with 401 Unauthorized.
+ * 3. Cross-tenant mutation attempts (PATCH /api/stores/store-2, DELETE store-2 product, etc.)
+ *    are strictly rejected with 403 Forbidden.
+ * 4. Role restrictions are enforced (e.g. rider token cannot hit merchant-only store configuration routes).
+ * 5. State queries filtered by storeId return strictly store-scoped data.
+ * 6. Store-scoped Khata settlement succeeds only for the authorized tenant.
  */
 
 async function runTenantIsolationVerification() {
@@ -34,10 +37,11 @@ async function runTenantIsolationVerification() {
     }),
   });
   const authStore1 = await authStore1Res.json();
-  console.log('Store 1 Auth Result:', authStore1);
-  if (!authStore1.success || authStore1.storeId !== 'store-1') {
-    throw new Error('Store 1 authentication failed');
+  console.log('Store 1 Auth Result:', { success: authStore1.success, storeId: authStore1.storeId, hasToken: Boolean(authStore1.token) });
+  if (!authStore1.success || authStore1.storeId !== 'store-1' || !authStore1.token) {
+    throw new Error('Store 1 authentication failed or token not issued');
   }
+  const tokenStore1 = authStore1.token;
 
   // 3. Attempt Invalid PIN for Store 1
   console.log('\n[Test 3] Verifying PIN authorization rejection with wrong PIN...');
@@ -92,11 +96,112 @@ async function runTenantIsolationVerification() {
   }
   console.log('✓ Store 2 query strictly isolated without foreign tenant leakage.');
 
-  // 6. Test Store-Scoped Khata Settlement
-  console.log('\n[Test 6] Testing store-scoped settlement execution...');
-  const settleRes = await fetch(`${BASE_URL}/api/customers/cust-1/settle-khata`, {
+  // 6. Test Unauthenticated Mutation Rejection
+  console.log('\n[Test 6] Verifying unauthenticated write rejection (401)...');
+  const unauthPatchRes = await fetch(`${BASE_URL}/api/stores/store-1`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: 'Hacked Store' }),
+  });
+  console.log('Unauthenticated PATCH Status Code:', unauthPatchRes.status);
+  if (unauthPatchRes.status !== 401) {
+    throw new Error(`Security violation: Unauthenticated mutation was not rejected with 401 (got ${unauthPatchRes.status})`);
+  }
+  console.log('✓ Unauthenticated write rejected with 401.');
+
+  // 7. Test Cross-Tenant Store Modification Rejection
+  console.log('\n[Test 7] Authenticated store-1 attempting to PATCH store-2 settings...');
+  const crossStorePatchRes = await fetch(`${BASE_URL}/api/stores/store-2`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${tokenStore1}`,
+    },
+    body: JSON.stringify({ name: 'Store 1 Hijack Name' }),
+  });
+  console.log('Cross-tenant Store PATCH Status Code:', crossStorePatchRes.status);
+  if (crossStorePatchRes.status !== 403) {
+    throw new Error(`Security violation: Cross-tenant store PATCH was not rejected with 403 (got ${crossStorePatchRes.status})`);
+  }
+  console.log('✓ Cross-tenant store mutation rejected with 403 Forbidden.');
+
+  // 8. Test Cross-Tenant Product Deletion Rejection
+  console.log('\n[Test 8] Authenticated store-1 attempting to DELETE store-2 product...');
+  const store2Product = store2State.products[0];
+  if (!store2Product) {
+    throw new Error('Setup error: No store-2 products available for cross-tenant test');
+  }
+  const crossDeleteProductRes = await fetch(`${BASE_URL}/api/products/${store2Product.id}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${tokenStore1}`,
+    },
+  });
+  console.log('Cross-tenant Product DELETE Status Code:', crossDeleteProductRes.status);
+  if (crossDeleteProductRes.status !== 403) {
+    throw new Error(`Security violation: Cross-tenant product DELETE was not rejected with 403 (got ${crossDeleteProductRes.status})`);
+  }
+  console.log('✓ Cross-tenant product deletion rejected with 403 Forbidden.');
+
+  // 9. Test Cross-Tenant Customer Khata Settlement Rejection
+  console.log('\n[Test 9] Authenticated store-1 attempting to settle Khata for store-2...');
+  const crossSettleRes = await fetch(`${BASE_URL}/api/customers/cust-1/settle-khata`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${tokenStore1}`,
+    },
+    body: JSON.stringify({
+      amount: 10,
+      storeId: 'store-2', // Deliberate mismatch
+      customerPhone: '+971 50 123 4567',
+    }),
+  });
+  console.log('Cross-tenant Settle Khata Status Code:', crossSettleRes.status);
+  if (crossSettleRes.status !== 403) {
+    throw new Error(`Security violation: Cross-tenant khata settlement was not rejected with 403 (got ${crossSettleRes.status})`);
+  }
+  console.log('✓ Cross-tenant Khata settlement rejected with 403 Forbidden.');
+
+  // 10. Test Role Restriction: Rider attempting merchant-only configuration
+  console.log('\n[Test 10] Rider token attempting merchant-only store PATCH...');
+  const authRiderRes = await fetch(`${BASE_URL}/api/auth/verify`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      role: 'rider',
+      storeId: 'store-1',
+      passcode: '5678',
+    }),
+  });
+  const authRider = await authRiderRes.json();
+  if (!authRider.success || !authRider.token) {
+    throw new Error('Rider authentication failed');
+  }
+  const riderToken = authRider.token;
+
+  const riderStorePatchRes = await fetch(`${BASE_URL}/api/stores/store-1`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${riderToken}`,
+    },
+    body: JSON.stringify({ name: 'Rider Renamed Store' }),
+  });
+  console.log('Rider Store PATCH Status Code:', riderStorePatchRes.status);
+  if (riderStorePatchRes.status !== 403) {
+    throw new Error(`Security violation: Rider role was not rejected with 403 on merchant route (got ${riderStorePatchRes.status})`);
+  }
+  console.log('✓ Rider role access to merchant route rejected with 403 Forbidden.');
+
+  // 11. Test Legitimate Store 1 Khata Settlement
+  console.log('\n[Test 11] Executing legitimate Store 1 Khata settlement with store-1 token...');
+  const legitimateSettleRes = await fetch(`${BASE_URL}/api/customers/cust-1/settle-khata`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${tokenStore1}`,
+    },
     body: JSON.stringify({
       amount: 5,
       note: 'Isolation automated test payment',
@@ -104,11 +209,12 @@ async function runTenantIsolationVerification() {
       customerPhone: '+971 50 123 4567',
     }),
   });
-  const settleData = await settleRes.json();
-  console.log('Settlement Response:', settleData);
-  if (!settleData.success) {
-    throw new Error('Settlement failed');
+  const legitimateSettle = await legitimateSettleRes.json();
+  console.log('Legitimate Settlement Response:', legitimateSettle);
+  if (!legitimateSettle.success) {
+    throw new Error('Legitimate settlement failed');
   }
+  console.log('✓ Legitimate store settlement succeeded.');
 
   console.log('\n======================================================');
   console.log('>>> ALL MULTI-TENANT ISOLATION TESTS PASSED (100%) <<<');

@@ -24,13 +24,43 @@ export function saveCachedState(state: AppState) {
   }
 }
 
+let inMemoryAuthToken: string | null = null;
+
+export function setAuthToken(token: string | null) {
+  inMemoryAuthToken = token;
+  try {
+    if (token) {
+      sessionStorage.setItem('elshop_auth_token', token);
+    } else {
+      sessionStorage.removeItem('elshop_auth_token');
+    }
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+export function getAuthToken(): string | null {
+  if (inMemoryAuthToken) return inMemoryAuthToken;
+  try {
+    return sessionStorage.getItem('elshop_auth_token');
+  } catch {
+    return null;
+  }
+}
+
 // Resilient fetch helper with timeout
 async function safeFetch(url: string, options?: RequestInit, timeoutMs = 4000): Promise<Response> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const token = getAuthToken();
+  const headers = new Headers(options?.headers || {});
+  if (token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
   try {
     const res = await fetch(url, {
       ...options,
+      headers,
       signal: controller.signal,
     });
     return res;
@@ -624,7 +654,7 @@ export async function verifyStaffAuth(payload: {
   role: 'merchant' | 'rider' | 'admin';
   storeId?: string;
   passcode: string;
-}): Promise<{ success: boolean; role?: string; storeId?: string; storeName?: string; message?: string }> {
+}): Promise<{ success: boolean; role?: string; storeId?: string; storeName?: string; message?: string; token?: string }> {
   try {
     const res = await safeFetch('/api/auth/verify', {
       method: 'POST',
@@ -632,15 +662,15 @@ export async function verifyStaffAuth(payload: {
       body: JSON.stringify(payload),
     });
     const data = await res.json();
+    if (data.success && data.token) {
+      setAuthToken(data.token);
+    }
     return data;
   } catch (err: any) {
     // Offline / fallback auth
     const cleanPass = payload.passcode.trim().toLowerCase();
     if (payload.role === 'admin') {
-      if (['admin2026', 'admin', 'admin123'].includes(cleanPass)) {
-        return { success: true, role: 'admin' };
-      }
-      return { success: false, message: 'Invalid Admin Key' };
+      return { success: false, message: 'Admin authentication requires active connection' };
     }
 
     const cached = getCachedState();
@@ -648,25 +678,25 @@ export async function verifyStaffAuth(payload: {
       const store = cached.stores.find((s) => s.id === payload.storeId);
       if (store) {
         if (payload.role === 'merchant') {
-          const valid = (store.pin || '1234').toLowerCase();
-          if (cleanPass === valid || cleanPass === '1234') {
+          const valid = (store.pin || '').trim().toLowerCase();
+          if (valid && cleanPass === valid) {
             return { success: true, role: 'merchant', storeId: store.id, storeName: store.name };
           }
         } else if (payload.role === 'rider') {
-          const valid = (store.riderPin || '5678').toLowerCase();
-          if (cleanPass === valid || cleanPass === '5678') {
+          const valid = (store.riderPin || '').trim().toLowerCase();
+          if (valid && cleanPass === valid) {
             return { success: true, role: 'rider', storeId: store.id, storeName: store.name };
           }
         }
       }
     } else {
       if (payload.role === 'merchant') {
-        const match = cached.stores.find((s) => (s.pin || '1234').toLowerCase() === cleanPass || cleanPass === '1234');
+        const match = cached.stores.find((s) => s.pin && s.pin.trim().toLowerCase() === cleanPass);
         if (match) {
           return { success: true, role: 'merchant', storeId: match.id, storeName: match.name };
         }
       } else if (payload.role === 'rider') {
-        const match = cached.stores.find((s) => (s.riderPin || '5678').toLowerCase() === cleanPass || cleanPass === '5678');
+        const match = cached.stores.find((s) => s.riderPin && s.riderPin.trim().toLowerCase() === cleanPass);
         if (match) {
           return { success: true, role: 'rider', storeId: match.id, storeName: match.name };
         }
@@ -872,15 +902,12 @@ export async function handleSuperadminAccessAttempt(params: {
   const accessType = params.access_type || 'superadmin_auth';
   const candidate = (params.passcode || params.secret || '').trim().toLowerCase();
 
-  const isProduction = typeof process !== 'undefined' && process.env?.NODE_ENV === 'production';
   const configuredSecret = typeof process !== 'undefined' ? (process.env?.ADMIN_PASSCODE || process.env?.SUPERADMIN_SECRET) : undefined;
+  const isProduction = typeof process !== 'undefined' ? process.env?.NODE_ENV === 'production' : false;
 
   let isValid = false;
-  if (configuredSecret && candidate === configuredSecret.trim().toLowerCase()) {
+  if (configuredSecret && candidate && candidate === configuredSecret.trim().toLowerCase()) {
     isValid = true;
-  } else if (!isProduction) {
-    const devSecrets = ['admin2026', 'admin', 'admin123', 'hazirnow_pilot_secret_2026', 'elshop-superadmin-secret-key-2026'];
-    isValid = devSecrets.includes(candidate);
   }
 
   if (candidate && isValid) {
@@ -919,10 +946,9 @@ export function superadminAuthMiddleware(req: any, res: any, next?: any) {
   const accessType = req.baseUrl || req.path || req.originalUrl || 'superadmin_api';
   const method = req.method;
 
-  const isProduction = typeof process !== 'undefined' && process.env?.NODE_ENV === 'production';
   const configuredSecret = typeof process !== 'undefined' ? process.env?.SUPERADMIN_SECRET : undefined;
 
-  if (isProduction && !configuredSecret) {
+  if (!configuredSecret) {
     logSuperadminAccess({
       timestamp: new Date().toISOString(),
       ip: clientIp,
@@ -930,22 +956,18 @@ export function superadminAuthMiddleware(req: any, res: any, next?: any) {
       access_type: accessType,
       endpoint: req.originalUrl || req.path,
       method,
-      reason: 'MISSING_PRODUCTION_SECRET',
+      reason: 'MISSING_SECRET_CONFIGURATION',
     });
     return res.status(500).json({
-      error: 'Server Misconfigured: Administrative secret is required in production mode.',
+      error: 'Server Misconfigured: Administrative secret is required.',
     });
   }
 
-  const adminSecret = configuredSecret || 'HazirNow_Pilot_Secret_2026';
   const providedSecret =
     req.headers?.['x-elshop-admin-secret'] ||
     req.headers?.['authorization']?.replace(/^Bearer\s+/i, '');
 
-  const isValid =
-    providedSecret &&
-    (providedSecret === adminSecret ||
-      (!isProduction && (providedSecret === 'elshop-superadmin-secret-key-2026' || providedSecret === 'admin2026')));
+  const isValid = Boolean(providedSecret && providedSecret === configuredSecret);
 
   if (!isValid) {
     logSuperadminAccess({

@@ -82,23 +82,18 @@ export const UnifiedLoginModal: React.FC<UnifiedLoginModalProps> = ({
     }
   };
 
-  const handleQuickDemoFill = (type: 'merchant' | 'rider' | 'admin') => {
+  const handleQuickDemoFill = (type: 'merchant' | 'rider') => {
     setErrorMsg(null);
     if (type === 'merchant') {
       setSelectedRole('merchant');
       const st = stores.find((s) => s.id === selectedStoreId) || stores[0];
-      setPasscode(st?.pin || '1234');
-      setPhone(st?.phone || '+971 50 123 4567');
+      setPasscode(st?.pin || '');
+      setPhone(st?.phone || '');
     } else if (type === 'rider') {
       setSelectedRole('rider');
       const st = stores.find((s) => s.id === selectedStoreId) || stores[0];
-      setPasscode(st?.riderPin || '5678');
+      setPasscode(st?.riderPin || '');
       setPhone('+971 52 987 6543');
-    } else if (type === 'admin') {
-      setSelectedRole('admin');
-      setAdminEmail('admin@elshop.ae');
-      const defaultAdminPass = (typeof process !== 'undefined' && process.env?.ADMIN_PASSCODE) ? process.env.ADMIN_PASSCODE : 'admin2026';
-      setAdminPassword(defaultAdminPass);
     }
   };
 
@@ -478,13 +473,15 @@ export const UnifiedLoginModal: React.FC<UnifiedLoginModalProps> = ({
                   <span>{isRtl ? 'تذكر هذه الجلسة' : 'Keep me signed in'}</span>
                 </label>
 
-                <button
-                  type="button"
-                  onClick={() => handleQuickDemoFill(selectedRole as any)}
-                  className="text-[11px] font-bold text-indigo-400 hover:text-indigo-300 underline underline-offset-2"
-                >
-                  {isRtl ? 'ملء تجريبي سريع' : 'Auto-Fill Demo Credentials'}
-                </button>
+                {selectedRole !== 'admin' && (
+                  <button
+                    type="button"
+                    onClick={() => handleQuickDemoFill(selectedRole as any)}
+                    className="text-[11px] font-bold text-indigo-400 hover:text-indigo-300 underline underline-offset-2"
+                  >
+                    {isRtl ? 'ملء تجريبي سريع' : 'Auto-Fill Store PIN'}
+                  </button>
+                )}
               </div>
 
               {/* Submit Button */}

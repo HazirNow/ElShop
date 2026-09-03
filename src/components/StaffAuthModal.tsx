@@ -378,40 +378,28 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
                 </span>
                 <span className="text-[10px] text-slate-500">Auto-locks on exit</span>
               </div>
-              <div className="grid grid-cols-3 gap-1.5 text-[10px] font-mono">
+              <div className="grid grid-cols-2 gap-1.5 text-[10px] font-mono">
                 <button
                   type="button"
                   onClick={() => {
                     setSelectedRole('merchant');
-                    setPasscode(targetStore?.pin || '1234');
+                    setPasscode(targetStore?.pin || '');
                     setErrorMsg(null);
                   }}
                   className="bg-slate-900 hover:bg-slate-800 p-1.5 rounded-lg text-center border border-slate-800 text-emerald-400"
                 >
-                  Store: <strong className="text-white">{targetStore?.pin || '1234'}</strong>
+                  Store: <strong className="text-white">{targetStore?.pin || '---'}</strong>
                 </button>
                 <button
                   type="button"
                   onClick={() => {
                     setSelectedRole('rider');
-                    setPasscode(targetStore?.riderPin || '5678');
+                    setPasscode(targetStore?.riderPin || '');
                     setErrorMsg(null);
                   }}
                   className="bg-slate-900 hover:bg-slate-800 p-1.5 rounded-lg text-center border border-slate-800 text-emerald-400"
                 >
-                  Rider: <strong className="text-white">{targetStore?.riderPin || '5678'}</strong>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedRole('admin');
-                    const defaultAdminPass = (typeof process !== 'undefined' && process.env?.ADMIN_PASSCODE) ? process.env.ADMIN_PASSCODE : 'admin2026';
-                    setPasscode(defaultAdminPass);
-                    setErrorMsg(null);
-                  }}
-                  className="bg-slate-900 hover:bg-slate-800 p-1.5 rounded-lg text-center border border-slate-800 text-amber-400"
-                >
-                  HQ: <strong className="text-white">Admin Master</strong>
+                  Rider: <strong className="text-white">{targetStore?.riderPin || '---'}</strong>
                 </button>
               </div>
             </div>
