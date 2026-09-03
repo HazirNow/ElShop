@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Banknote, 
   CreditCard, 
@@ -10,7 +10,11 @@ import {
   DollarSign,
   Store,
   Layers,
-  Scale
+  Scale,
+  Monitor,
+  Cpu,
+  Terminal,
+  Check
 } from 'lucide-react';
 import { AppState, Store as StoreType, Language } from '../types';
 import { calculateCustomerKhataBalance } from '../khataUtils';
@@ -26,11 +30,57 @@ interface Props {
   onOpenUpgradeModal?: (featureTitle?: string) => void;
 }
 
+export interface TillStation {
+  id: string;
+  nameEn: string;
+  nameAr: string;
+  code: string;
+}
+
+export const TILL_STATIONS: TillStation[] = [
+  { id: 'till-1', nameEn: 'Till #1 (Main Front Register)', nameAr: 'نقطة 1 (الكاشير الرئيسي)', code: 'TILL-01' },
+  { id: 'till-2', nameEn: 'Till #2 (Express & Snacks Counter)', nameAr: 'نقطة 2 (السريع والوجبات)', code: 'TILL-02' },
+  { id: 'till-3', nameEn: 'Till #3 (Delivery & Phone Orders)', nameAr: 'نقطة 3 (تجهيز التوصيل والطلبات)', code: 'TILL-03' }
+];
+
 export const DailyBaqalaSummary: React.FC<Props> = ({ state, store, lang, onRefresh, onOpenUpgradeModal }) => {
   const isAr = lang === 'ar';
   const tierAccess = useTierAccess(store);
   const todayStr = new Date().toISOString().split('T')[0];
   const [isReconcileOpen, setIsReconcileOpen] = useState(false);
+
+  // Hardware Terminal Token Generation & Multi-Till Selection
+  const [activeTillId, setActiveTillId] = useState<string>(() => {
+    try {
+      return localStorage.getItem('elshop_active_till_id') || 'till-1';
+    } catch {
+      return 'till-1';
+    }
+  });
+
+  const [hardwareToken, setHardwareToken] = useState<string>(() => {
+    try {
+      let token = localStorage.getItem('elshop_pos_hardware_token');
+      if (!token) {
+        token = `POS-HW-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+        localStorage.setItem('elshop_pos_hardware_token', token);
+      }
+      return token;
+    } catch {
+      return 'POS-HW-7B92';
+    }
+  });
+
+  const activeTill = TILL_STATIONS.find((t) => t.id === activeTillId) || TILL_STATIONS[0];
+
+  const handleSelectTill = (tillId: string) => {
+    setActiveTillId(tillId);
+    try {
+      localStorage.setItem('elshop_active_till_id', tillId);
+    } catch {
+      // ignore
+    }
+  };
 
   // Store orders
   const storeOrders = (state.orders || []).filter((o) => o.storeId === store.id);
@@ -166,6 +216,46 @@ export const DailyBaqalaSummary: React.FC<Props> = ({ state, store, lang, onRefr
         </div>
       </div>
 
+      {/* Multi-Till Hardware Tracking Status Bar */}
+      <div className="mt-3 bg-slate-950/90 border border-slate-800/80 rounded-xl p-2.5 flex flex-col md:flex-row md:items-center justify-between gap-2 text-xs">
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 text-slate-400 font-medium">
+            <Monitor className="w-3.5 h-3.5 text-blue-400" />
+            <span>{isAr ? 'نقطة البيع النشطة:' : 'Active POS Till:'}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            {TILL_STATIONS.map((till) => {
+              const isSelected = till.id === activeTillId;
+              return (
+                <button
+                  key={till.id}
+                  type="button"
+                  onClick={() => handleSelectTill(till.id)}
+                  className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 ${
+                    isSelected
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                  }`}
+                >
+                  <span>{till.code}</span>
+                  {isSelected && <Check className="w-3 h-3" />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 text-[11px] text-slate-400">
+          <div className="flex items-center gap-1 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded-md font-mono text-[10px]">
+            <Terminal className="w-3 h-3 text-emerald-400" />
+            <span className="text-slate-300">{hardwareToken}</span>
+          </div>
+          <span className="text-slate-500 font-medium">
+            {isAr ? activeTill.nameAr : activeTill.nameEn}
+          </span>
+        </div>
+      </div>
+
       {/* 4 Clean Metric Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
         {/* 1. Cash Collected */}
@@ -248,6 +338,8 @@ export const DailyBaqalaSummary: React.FC<Props> = ({ state, store, lang, onRefr
         state={state}
         store={store}
         lang={lang}
+        tillId={activeTillId}
+        tillHardwareToken={hardwareToken}
         onSuccess={() => {
           if (onRefresh) onRefresh();
         }}

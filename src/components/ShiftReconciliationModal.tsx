@@ -29,6 +29,8 @@ interface Props {
   state: AppState;
   store: Store;
   lang: Language;
+  tillId?: string;
+  tillHardwareToken?: string;
   onSuccess?: () => void;
 }
 
@@ -53,9 +55,13 @@ export const ShiftReconciliationModal: React.FC<Props> = ({
   state,
   store,
   lang,
+  tillId = 'till-1',
+  tillHardwareToken,
   onSuccess
 }) => {
   const isAr = lang === 'ar';
+  const effectiveTillCode = tillId === 'till-2' ? 'TILL-02' : tillId === 'till-3' ? 'TILL-03' : 'TILL-01';
+  const effectiveHardwareToken = tillHardwareToken || 'POS-HW-MAIN';
   
   // Date calculation supporting both local UAE date and UTC
   const now = new Date();
@@ -181,7 +187,7 @@ export const ShiftReconciliationModal: React.FC<Props> = ({
         expectedCash,
         actualCash: parsedPhysicalCount,
         status: isBalanced ? 'approved' : 'disputed',
-        notes: `Shift Drawer Settlement | ${cashierName} | Shift: ${shiftType} | Float: ${parsedFloatAED.toFixed(2)} AED | Sales: ${cashSales.toFixed(2)} AED | Payouts: ${parsedPayoutsAED.toFixed(2)} AED | Variance: ${variance! >= 0 ? '+' : ''}${variance!.toFixed(2)} AED | Reason: ${varianceReason} | Notes: ${managerNotes || 'None'}`
+        notes: `Shift Drawer Settlement | Till: ${effectiveTillCode} (${effectiveHardwareToken}) | ${cashierName} | Shift: ${shiftType} | Float: ${parsedFloatAED.toFixed(2)} AED | Sales: ${cashSales.toFixed(2)} AED | Payouts: ${parsedPayoutsAED.toFixed(2)} AED | Variance: ${variance! >= 0 ? '+' : ''}${variance!.toFixed(2)} AED | Reason: ${varianceReason} | Notes: ${managerNotes || 'None'}`
       });
 
       // 2. Persist to tenant-isolated and global localStorage for LossPrevention ROI audit logs
@@ -190,6 +196,9 @@ export const ShiftReconciliationModal: React.FC<Props> = ({
           id: `audit-${Date.now()}`,
           timestamp: new Date().toISOString(),
           storeId: store.id,
+          tillId,
+          tillCode: effectiveTillCode,
+          hardwareToken: effectiveHardwareToken,
           shiftType,
           cashierName,
           openingFloatFils: parsedFloatFils,
@@ -208,6 +217,11 @@ export const ShiftReconciliationModal: React.FC<Props> = ({
         const existingTenant = JSON.parse(localStorage.getItem(tenantKey) || '[]');
         existingTenant.unshift(auditEntry);
         localStorage.setItem(tenantKey, JSON.stringify(existingTenant.slice(0, 50)));
+
+        const tillKey = `pilot_cash_audit_trail_${store.id}_${tillId}`;
+        const existingTill = JSON.parse(localStorage.getItem(tillKey) || '[]');
+        existingTill.unshift(auditEntry);
+        localStorage.setItem(tillKey, JSON.stringify(existingTill.slice(0, 50)));
 
         const existingGlobal = JSON.parse(localStorage.getItem('pilot_cash_audit_trail') || '[]');
         existingGlobal.unshift(auditEntry);
@@ -338,14 +352,20 @@ export const ShiftReconciliationModal: React.FC<Props> = ({
         <div className="p-6 space-y-5 overflow-y-auto flex-1">
           {/* Shift Metadata & Cashier Selection */}
           <div className="bg-slate-950/70 border border-slate-800 p-3.5 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs">
-            <div className="flex items-center gap-2">
-              <span className="text-slate-400 font-medium">{isAr ? 'الكاشير المسؤول:' : 'Cashier on Duty:'}</span>
-              <input
-                type="text"
-                value={cashierName}
-                onChange={(e) => setCashierName(e.target.value)}
-                className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-white font-semibold text-xs focus:border-amber-400 focus:outline-none"
-              />
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5 bg-blue-950/60 border border-blue-800/60 px-2.5 py-1 rounded-lg">
+                <span className="text-blue-400 font-bold">{effectiveTillCode}</span>
+                <span className="text-[10px] text-slate-400 font-mono">({effectiveHardwareToken})</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-slate-400 font-medium">{isAr ? 'الكاشير:' : 'Cashier:'}</span>
+                <input
+                  type="text"
+                  value={cashierName}
+                  onChange={(e) => setCashierName(e.target.value)}
+                  className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-white font-semibold text-xs focus:border-amber-400 focus:outline-none"
+                />
+              </div>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="text-slate-400 font-medium">{isAr ? 'الوردية:' : 'Shift:'}</span>

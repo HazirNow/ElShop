@@ -964,15 +964,15 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
             </div>
           )}
 
-          {/* 3-Column Board Grid */}
-          <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* 3-Column Board Grid (Strictly pinned to LTR for chronological fulfillment: Incoming -> Packing -> Out for Delivery) */}
+          <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4" dir="ltr">
             
             {/* Column 1: New Orders */}
             <div className="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-3 flex flex-col">
               <div className="flex items-center justify-between pb-2 mb-3 border-b border-slate-700">
                 <h3 className="font-bold text-xs text-slate-200 flex items-center gap-2 tracking-wider uppercase">
                   <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
-                  <span>NEW ORDERS ({newOrders.length})</span>
+                  <span>{isRtl ? 'الطلبات الجديدة (1. Incoming)' : 'NEW ORDERS'} ({newOrders.length})</span>
                 </h3>
               </div>
 
@@ -980,6 +980,7 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
                 {newOrders.map((ord) => (
                   <div
                     key={ord.id}
+                    dir={isRtl ? 'rtl' : 'ltr'}
                     className="bg-slate-900/90 rounded-xl p-4 border border-slate-700/80 shadow-sm hover:border-[#0B6E4F] transition-all"
                   >
                     <div className="flex justify-between items-start mb-2">
@@ -1011,7 +1012,7 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
                         className="bg-[#0B6E4F] hover:bg-emerald-600 text-white font-extrabold px-4 py-1.5 rounded-lg text-xs transition-all shadow flex items-center gap-1"
                       >
                         <Check className="w-3.5 h-3.5" />
-                        <span>ACCEPT</span>
+                        <span>{isRtl ? 'قبول وبدء التجهيز' : 'ACCEPT'}</span>
                       </button>
                     </div>
                   </div>
@@ -1030,7 +1031,7 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
               <div className="flex items-center justify-between pb-2 mb-3 border-b border-slate-700">
                 <h3 className="font-bold text-xs text-slate-200 flex items-center gap-2 tracking-wider uppercase">
                   <span className="w-2.5 h-2.5 rounded-full bg-[#F5A623]"></span>
-                  <span>PACKING ({packingOrders.length})</span>
+                  <span>{isRtl ? 'قيد التجهيز (2. Packing)' : 'PACKING'} ({packingOrders.length})</span>
                 </h3>
               </div>
 
@@ -1041,6 +1042,7 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
                   return (
                     <div
                       key={ord.id}
+                      dir={isRtl ? 'rtl' : 'ltr'}
                       onClick={() => setSelectedOrder(ord)}
                       className="bg-slate-900/90 rounded-xl p-4 border-2 border-[#0B6E4F] shadow-md hover:border-emerald-400 transition-all cursor-pointer group"
                     >
@@ -1070,13 +1072,13 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
                           const isChecked = ord.packedItems?.includes(it.productId);
                           return (
                             <div key={it.productId} className={`flex items-center text-xs ${isChecked ? 'text-emerald-400 font-semibold' : 'text-slate-400'}`}>
-                              <span className="mr-2 font-bold">{isChecked ? '✓' : '□'}</span>
+                              <span className="mr-2 rtl:ml-2 rtl:mr-0 font-bold">{isChecked ? '✓' : '□'}</span>
                               <span>{isRtl ? it.nameAr : it.name}</span>
                             </div>
                           );
                         })}
                         {ord.items.length > 2 && (
-                          <div className="text-[10px] text-slate-500 italic pl-4">
+                          <div className="text-[10px] text-slate-500 italic pl-4 rtl:pr-4 rtl:pl-0">
                             + {ord.items.length - 2} more items...
                           </div>
                         )}
@@ -1090,7 +1092,7 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
                           }}
                           className="flex-1 bg-[#F5A623] hover:bg-amber-500 text-slate-950 py-2 rounded-lg text-xs font-black transition-all shadow uppercase tracking-wider"
                         >
-                          DISPATCH TO RIDER
+                          {isRtl ? 'إرسال إلى السائق' : 'DISPATCH TO RIDER'}
                         </button>
                         <a
                           href={generateOrderStatusUpdateWhatsAppLink(ord, store, 'packing', lang)}
@@ -1120,7 +1122,7 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
               <div className="flex items-center justify-between pb-2 mb-3 border-b border-slate-700">
                 <h3 className="font-bold text-xs text-slate-200 flex items-center gap-2 tracking-wider uppercase">
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                  <span>OUT FOR DELIVERY ({outForDeliveryOrders.length})</span>
+                  <span>{isRtl ? 'خرج للتوصيل (3. Dispatched)' : 'OUT FOR DELIVERY'} ({outForDeliveryOrders.length})</span>
                 </h3>
               </div>
 
@@ -1128,6 +1130,7 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
                 {outForDeliveryOrders.map((ord) => (
                   <div
                     key={ord.id}
+                    dir={isRtl ? 'rtl' : 'ltr'}
                     className="bg-slate-900/90 rounded-xl p-4 border border-slate-700/80 shadow-sm opacity-95"
                   >
                     <div className="flex justify-between items-start mb-2">

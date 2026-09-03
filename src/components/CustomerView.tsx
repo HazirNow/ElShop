@@ -26,7 +26,11 @@ import {
   Edit3,
   ShieldCheck,
   Building,
-  CheckCircle2
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  Shield,
+  Lock
 } from 'lucide-react';
 import { AppState, Order, Product, ProductCategory, CustomerProfile, Language } from '../types';
 import { createOrder, sendChatMessage } from '../api';
@@ -102,6 +106,30 @@ export const CustomerView: React.FC<Props> = ({
   const [showPwaBanner, setShowPwaBanner] = useState(true);
   const [showQuickReorder, setShowQuickReorder] = useState(true);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+
+  // Secure Account Mode for Shared Family / Neighborhood Mobile Screens
+  const [isSecureAccountMode, setIsSecureAccountMode] = useState<boolean>(() => {
+    try {
+      const stored = localStorage.getItem('elshop_secure_account_mode');
+      return stored !== null ? stored === 'true' : true; // Default ON for family privacy protection
+    } catch {
+      return true;
+    }
+  });
+  const [isBalanceRevealed, setIsBalanceRevealed] = useState(false);
+
+  const toggleSecureAccountMode = () => {
+    setIsSecureAccountMode((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('elshop_secure_account_mode', String(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+    setIsBalanceRevealed(false);
+  };
 
   // Filters & Search
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
@@ -711,21 +739,51 @@ export const CustomerView: React.FC<Props> = ({
                     </div>
                   </div>
 
-                  {/* Customer Private Khata Balance Owed Pill (Only displays amount owed to shop, no limits/progress bars) */}
+                  {/* Customer Private Khata Balance / Secure Account Indicator */}
                   <div className="text-right flex items-center gap-1.5">
                     {currentCustomer.isKhataPreApproved ? (
-                      <button
-                        onClick={() => setShowProfileModal(true)}
-                        className="bg-amber-50 hover:bg-amber-100/80 border border-amber-200 px-2.5 py-1 rounded-xl text-[10px] text-right shadow-xs transition-all text-left"
-                        title="Click to view Khata statement details"
-                      >
-                        <span className="text-slate-500 block text-[9px] font-bold">
-                          {isRtl ? 'الرصيد المستحق للبقالة' : 'Khata Balance Owed'}
-                        </span>
-                        <span className="font-black text-amber-900 text-xs">
-                          {currentCustKhataBalance.toFixed(2)} AED
-                        </span>
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (isSecureAccountMode) {
+                              setIsBalanceRevealed((v) => !v);
+                            } else {
+                              setShowProfileModal(true);
+                            }
+                          }}
+                          className="bg-amber-50 hover:bg-amber-100/80 border border-amber-200 px-2.5 py-1 rounded-xl text-[10px] text-right shadow-xs transition-all text-left"
+                          title={isSecureAccountMode ? (isBalanceRevealed ? 'Tap to hide balance' : 'Tap to reveal balance') : 'View Khata statement'}
+                        >
+                          <span className="text-slate-500 flex items-center justify-between gap-1 text-[9px] font-bold">
+                            <span>{isRtl ? 'حساب الدفتر' : 'Store Tab'}</span>
+                            {isSecureAccountMode && (
+                              <span className="text-[8px] text-emerald-700 bg-emerald-100 px-1 rounded font-bold">
+                                {isBalanceRevealed ? (isRtl ? 'ظاهر' : 'Visible') : (isRtl ? 'محمي' : 'Private')}
+                              </span>
+                            )}
+                          </span>
+                          <span className="font-black text-amber-900 text-xs flex items-center gap-1">
+                            {isSecureAccountMode && !isBalanceRevealed ? (
+                              <span className="tracking-widest text-slate-700 font-mono">•••• AED</span>
+                            ) : (
+                              <span>{currentCustKhataBalance.toFixed(2)} AED</span>
+                            )}
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={toggleSecureAccountMode}
+                          className={`p-1.5 rounded-xl border transition-all ${
+                            isSecureAccountMode 
+                              ? 'bg-emerald-50 border-emerald-300 text-emerald-800' 
+                              : 'bg-slate-100 border-slate-200 text-slate-400 hover:text-slate-600'
+                          }`}
+                          title={isSecureAccountMode ? (isRtl ? 'وضع الخصوصية مفعل' : 'Secure Account Mode Active') : (isRtl ? 'تفعيل وضع الخصوصية' : 'Enable Secure Account Mode')}
+                        >
+                          {isSecureAccountMode ? <Shield className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
                     ) : (
                       <button
                         onClick={() => setShowProfileModal(true)}
@@ -1317,7 +1375,7 @@ export const CustomerView: React.FC<Props> = ({
                       className={`p-3 rounded-xl border cursor-pointer transition-all ${
                         paymentMethod === 'khata'
                           ? isKhataLimitExceeded
-                            ? 'border-rose-500 bg-rose-50/70'
+                            ? 'border-amber-500/80 bg-amber-50/70'
                             : 'border-[#0B6E4F] bg-emerald-50/50'
                           : 'border-slate-200 hover:bg-slate-50'
                       }`}
@@ -1326,31 +1384,76 @@ export const CustomerView: React.FC<Props> = ({
                         <div className="flex items-center gap-2.5">
                           <BookOpen className="w-4 h-4 text-amber-700" />
                           <div>
-                            <span className="text-xs font-semibold block">{t('khataBook')}</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-semibold block">{t('khataBook')}</span>
+                              {isSecureAccountMode && (
+                                <span className="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.2 rounded-full flex items-center gap-0.5">
+                                  <Shield className="w-2.5 h-2.5" />
+                                  <span>{isRtl ? 'حساب خاص' : 'Secure Tab'}</span>
+                                </span>
+                              )}
+                            </div>
                             <span className="text-[10px] text-emerald-700 font-medium">Merchant Pre-Approved Credit</span>
                           </div>
                         </div>
-                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${paymentMethod === 'khata' ? isKhataLimitExceeded ? 'border-rose-600 bg-rose-600' : 'border-[#0B6E4F] bg-[#0B6E4F]' : 'border-slate-300'}`}>
+                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${paymentMethod === 'khata' ? 'border-[#0B6E4F] bg-[#0B6E4F]' : 'border-slate-300'}`}>
                           {paymentMethod === 'khata' && <div className="w-1.5 h-1.5 bg-white rounded-full"></div>}
                         </div>
                       </div>
 
-                      <div className="mt-2 space-y-1 text-[11px]">
-                        <div className="flex justify-between items-center text-slate-600">
-                          <span>{isRtl ? 'الرصيد المستحق الحالي:' : 'Current Balance Owed:'}</span>
-                          <span className="font-bold text-slate-800">{currentCustKhataBalance.toFixed(2)} AED</span>
-                        </div>
-                        <div className="flex justify-between items-center text-slate-700 font-bold">
-                          <span>{isRtl ? 'الرصيد المستحق بعد الطلب:' : 'Projected Balance Owed:'}</span>
-                          <span className="text-amber-800 font-black">{(currentCustKhataBalance + cartTotal).toFixed(2)} AED</span>
-                        </div>
+                      {/* Ledger Status Details (Respects Secure Account Mode) */}
+                      <div className="mt-2 space-y-1.5 text-[11px] bg-white/80 p-2 rounded-lg border border-slate-200/80">
+                        {isSecureAccountMode && !isBalanceRevealed ? (
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5 text-slate-700">
+                              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                              <span className="font-semibold">{t('accountStatusConfidential')}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setIsBalanceRevealed(true);
+                              }}
+                              className="text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-2 py-0.5 rounded-md flex items-center gap-1 transition-all"
+                            >
+                              <Eye className="w-3 h-3 text-slate-500" />
+                              <span>{t('tapToReveal')}</span>
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="flex justify-between items-center text-slate-600">
+                              <span>{isRtl ? 'الرصيد المستحق الحالي:' : 'Current Balance Owed:'}</span>
+                              <span className="font-bold text-slate-800">{currentCustKhataBalance.toFixed(2)} AED</span>
+                            </div>
+                            <div className="flex justify-between items-center text-slate-700 font-bold">
+                              <span>{isRtl ? 'الرصيد المستحق بعد الطلب:' : 'Projected Balance Owed:'}</span>
+                              <span className="text-amber-800 font-black">{(currentCustKhataBalance + cartTotal).toFixed(2)} AED</span>
+                            </div>
+                            {isSecureAccountMode && (
+                              <div className="flex justify-end pt-1">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setIsBalanceRevealed(false);
+                                  }}
+                                  className="text-[9px] text-slate-500 hover:text-slate-800 flex items-center gap-0.5"
+                                >
+                                  <EyeOff className="w-2.5 h-2.5" />
+                                  <span>{t('tapToMask')}</span>
+                                </button>
+                              </div>
+                            )}
+                          </>
+                        )}
+
                         {isKhataLimitExceeded && (
-                          <div className="bg-rose-100/90 text-rose-800 text-[10px] p-2 rounded-lg border border-rose-300 flex items-start gap-1 mt-1">
-                            <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0 mt-0.5" />
+                          <div className="bg-amber-100/90 text-amber-900 text-[10px] p-2 rounded-lg border border-amber-300 flex items-start gap-1 mt-1">
+                            <AlertCircle className="w-3.5 h-3.5 text-amber-700 shrink-0 mt-0.5" />
                             <span>
-                              {isRtl
-                                ? 'تم الوصول للحد الائتماني المسموح به في المتجر. يرجى اختيار الدفع عند الاستلام أو بالبطاقة.'
-                                : 'Khata credit limit reached for this account. Please select Cash on Delivery or Card Terminal.'}
+                              {t('orderExceedsCreditPrompt')}
                             </span>
                           </div>
                         )}
