@@ -405,12 +405,13 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
                   type="button"
                   onClick={() => {
                     setSelectedRole('admin');
-                    setPasscode('admin2026');
+                    const defaultAdminPass = (typeof process !== 'undefined' && process.env?.ADMIN_PASSCODE) ? process.env.ADMIN_PASSCODE : 'admin2026';
+                    setPasscode(defaultAdminPass);
                     setErrorMsg(null);
                   }}
                   className="bg-slate-900 hover:bg-slate-800 p-1.5 rounded-lg text-center border border-slate-800 text-amber-400"
                 >
-                  HQ: <strong className="text-white">admin2026</strong>
+                  HQ: <strong className="text-white">Admin Master</strong>
                 </button>
               </div>
             </div>

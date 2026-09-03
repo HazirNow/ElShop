@@ -154,11 +154,14 @@ describe('ElShop Platform Security Infrastructure', () => {
     expect(unauthLog.status).toBe('failure');
     expect(unauthLog.access_type).toBe('/api/superadmin/global-pulse');
 
-    // 2. Successful request
+    // 2. Successful request using dynamic mocked secret
+    const mockedSecureSecret = 'HazirNow_Test_Mock_Secret_9981';
+    vi.stubEnv('SUPERADMIN_SECRET', mockedSecureSecret);
+
     const authorizedReq = {
       headers: {
         'x-forwarded-for': '82.165.1.20',
-        'x-elshop-admin-secret': 'admin2026',
+        'x-elshop-admin-secret': mockedSecureSecret,
       },
       path: '/api/superadmin/global-pulse',
       originalUrl: '/api/superadmin/global-pulse',
@@ -174,20 +177,19 @@ describe('ElShop Platform Security Infrastructure', () => {
     expect(authLog.status).toBe('success');
     expect(authLog.access_type).toBe('/api/superadmin/global-pulse');
 
+    vi.unstubAllEnvs();
     logSpy.mockRestore();
   });
 
   it('should fail-closed in production mode when SUPERADMIN_SECRET is missing', () => {
-    const originalEnv = process.env.NODE_ENV;
-    const originalSecret = process.env.SUPERADMIN_SECRET;
-
-    process.env.NODE_ENV = 'production';
+    vi.stubEnv('NODE_ENV', 'production');
     delete process.env.SUPERADMIN_SECRET;
+    delete process.env.ADMIN_PASSCODE;
 
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
     const req = {
-      headers: { 'x-forwarded-for': '127.0.0.1', 'x-elshop-admin-secret': 'admin2026' },
+      headers: { 'x-forwarded-for': '127.0.0.1', 'x-elshop-admin-secret': 'mock-candidate-key-7711' },
       path: '/api/superadmin/global-pulse',
       originalUrl: '/api/superadmin/global-pulse',
       method: 'GET',
@@ -214,8 +216,7 @@ describe('ElShop Platform Security Infrastructure', () => {
     expect(lastLog.status).toBe('failure');
     expect(lastLog.reason).toBe('MISSING_PRODUCTION_SECRET');
 
-    process.env.NODE_ENV = originalEnv;
-    if (originalSecret) process.env.SUPERADMIN_SECRET = originalSecret;
+    vi.unstubAllEnvs();
     logSpy.mockRestore();
   });
 
@@ -260,13 +261,17 @@ describe('ElShop Platform Security Infrastructure', () => {
   });
 
   it('should reject static dev passcodes in production for /api/auth/verify unless ADMIN_PASSCODE matches', () => {
-    const isProduction = true;
-    const configuredAdminPass = 'SuperSecureProdSecret999';
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('ADMIN_PASSCODE', 'SuperSecureProdSecret999');
+
     const devPasscode = 'admin2026';
     const validProdPasscode = 'SuperSecureProdSecret999';
 
     // Verify dev pass rejection in production
     const isDevPassValidInProd = (pass: string) => {
+      const isProduction = process.env.NODE_ENV === 'production';
+      const configuredAdminPass = process.env.ADMIN_PASSCODE || process.env.SUPERADMIN_SECRET;
+
       if (configuredAdminPass && pass.toLowerCase() === configuredAdminPass.toLowerCase()) {
         return true;
       }
@@ -278,5 +283,7 @@ describe('ElShop Platform Security Infrastructure', () => {
 
     expect(isDevPassValidInProd(devPasscode)).toBe(false);
     expect(isDevPassValidInProd(validProdPasscode)).toBe(true);
+
+    vi.unstubAllEnvs();
   });
 });

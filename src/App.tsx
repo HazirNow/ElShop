@@ -29,9 +29,7 @@ import { AppState, Role, Language, Store } from './types';
 import { fetchState, resetDatabase, getCachedState } from './api';
 import { syncStateToIndexedDb } from './lib/offlineDb';
 import { CustomerView } from './components/CustomerView';
-import { MerchantView } from './components/MerchantView';
 import { RiderView } from './components/RiderView';
-import { AdminDashboard } from './components/AdminDashboard';
 import { LandingPage } from './components/LandingPage';
 import { StaffAuthModal } from './components/StaffAuthModal';
 import { UnifiedLoginModal } from './components/UnifiedLoginModal';
@@ -41,6 +39,14 @@ import { ProductImage } from './components/ProductImage';
 import { ElShopLogo } from './components/ElShopLogo';
 import { PilotTrainingOverlay } from './components/PilotTrainingOverlay';
 import { getTranslation } from './translations';
+
+// Dynamic lazy imports for heavy sub-dashboards
+const MerchantView = React.lazy(() =>
+  import('./components/MerchantView').then((m) => ({ default: m.MerchantView }))
+);
+const AdminDashboard = React.lazy(() =>
+  import('./components/AdminDashboard').then((m) => ({ default: m.AdminDashboard }))
+);
 
 export default function App() {
   const [appState, setAppState] = useState<AppState>(getCachedState);
@@ -434,46 +440,55 @@ export default function App() {
 
       {/* --- MAIN ROLE VIEW BODY --- */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-2 sm:p-4 md:p-6">
-        {activeRole === 'customer' && (
-          <CustomerView
-            state={appState}
-            activeStoreId={activeStoreId}
-            activeCustomerId={activeCustomerId}
-            lang={lang}
-            isLoading={isInitialLoading || !appState.stores.length}
-            onRefresh={loadState}
-            onToggleLang={() => setLang(lang === 'en' ? 'ar' : 'en')}
-            onOpenLegal={openLegalModal}
-          />
-        )}
+        <React.Suspense
+          fallback={
+            <div className="flex flex-col items-center justify-center py-20 text-slate-400 space-y-3">
+              <div className="w-8 h-8 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+              <p className="text-xs font-medium">{isRtl ? 'جاري تحميل لوحة التحكم...' : 'Loading dashboard module...'}</p>
+            </div>
+          }
+        >
+          {activeRole === 'customer' && (
+            <CustomerView
+              state={appState}
+              activeStoreId={activeStoreId}
+              activeCustomerId={activeCustomerId}
+              lang={lang}
+              isLoading={isInitialLoading || !appState.stores.length}
+              onRefresh={loadState}
+              onToggleLang={() => setLang(lang === 'en' ? 'ar' : 'en')}
+              onOpenLegal={openLegalModal}
+            />
+          )}
 
-        {activeRole === 'merchant' && (
-          <MerchantView
-            state={appState}
-            activeStoreId={activeStoreId}
-            lang={lang}
-            isLoading={isInitialLoading || !appState.stores.length}
-            onRefresh={loadState}
-          />
-        )}
+          {activeRole === 'merchant' && (
+            <MerchantView
+              state={appState}
+              activeStoreId={activeStoreId}
+              lang={lang}
+              isLoading={isInitialLoading || !appState.stores.length}
+              onRefresh={loadState}
+            />
+          )}
 
-        {activeRole === 'rider' && (
-          <RiderView
-            state={appState}
-            activeStoreId={activeStoreId}
-            lang={lang}
-            onRefresh={loadState}
-          />
-        )}
+          {activeRole === 'rider' && (
+            <RiderView
+              state={appState}
+              activeStoreId={activeStoreId}
+              lang={lang}
+              onRefresh={loadState}
+            />
+          )}
 
-        {activeRole === 'admin' && (
-          <AdminDashboard
-            state={appState}
-            lang={lang}
-            onRefresh={loadState}
-            onLogout={handleLockAndExitStaff}
-          />
-        )}
+          {activeRole === 'admin' && (
+            <AdminDashboard
+              state={appState}
+              lang={lang}
+              onRefresh={loadState}
+              onLogout={handleLockAndExitStaff}
+            />
+          )}
+        </React.Suspense>
       </main>
 
       {/* Terms, Privacy & Disclaimers Modal */}

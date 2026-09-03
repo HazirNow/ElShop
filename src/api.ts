@@ -873,18 +873,17 @@ export async function handleSuperadminAccessAttempt(params: {
   const candidate = (params.passcode || params.secret || '').trim().toLowerCase();
 
   const isProduction = typeof process !== 'undefined' && process.env?.NODE_ENV === 'production';
-  const configuredSecret = typeof process !== 'undefined' ? process.env?.SUPERADMIN_SECRET : undefined;
+  const configuredSecret = typeof process !== 'undefined' ? (process.env?.ADMIN_PASSCODE || process.env?.SUPERADMIN_SECRET) : undefined;
 
-  const validSecrets = [
-    'admin2026',
-    'admin',
-    'admin123',
-    'hazirnow_pilot_secret_2026',
-    'elshop-superadmin-secret-key-2026',
-    ...(configuredSecret ? [configuredSecret.toLowerCase()] : []),
-  ];
+  let isValid = false;
+  if (configuredSecret && candidate === configuredSecret.trim().toLowerCase()) {
+    isValid = true;
+  } else if (!isProduction) {
+    const devSecrets = ['admin2026', 'admin', 'admin123', 'hazirnow_pilot_secret_2026', 'elshop-superadmin-secret-key-2026'];
+    isValid = devSecrets.includes(candidate);
+  }
 
-  if (candidate && validSecrets.includes(candidate)) {
+  if (candidate && isValid) {
     const log = logSuperadminAccess({
       timestamp: new Date().toISOString(),
       ip,
@@ -901,7 +900,7 @@ export async function handleSuperadminAccessAttempt(params: {
     ip,
     status: 'failure',
     access_type: accessType,
-    reason: candidate ? 'INVALID_CREDENTIALS' : 'MISSING_CREDENTIALS',
+    reason: candidate ? (isProduction && !configuredSecret ? 'MISSING_PRODUCTION_SECRET' : 'INVALID_CREDENTIALS') : 'MISSING_CREDENTIALS',
     endpoint: params.endpoint,
     method: params.method,
   });
@@ -946,8 +945,7 @@ export function superadminAuthMiddleware(req: any, res: any, next?: any) {
   const isValid =
     providedSecret &&
     (providedSecret === adminSecret ||
-      (!isProduction && providedSecret === 'elshop-superadmin-secret-key-2026') ||
-      providedSecret === 'admin2026');
+      (!isProduction && (providedSecret === 'elshop-superadmin-secret-key-2026' || providedSecret === 'admin2026')));
 
   if (!isValid) {
     logSuperadminAccess({

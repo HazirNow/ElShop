@@ -97,7 +97,8 @@ export const UnifiedLoginModal: React.FC<UnifiedLoginModalProps> = ({
     } else if (type === 'admin') {
       setSelectedRole('admin');
       setAdminEmail('admin@elshop.ae');
-      setAdminPassword('admin2026');
+      const defaultAdminPass = (typeof process !== 'undefined' && process.env?.ADMIN_PASSCODE) ? process.env.ADMIN_PASSCODE : 'admin2026';
+      setAdminPassword(defaultAdminPass);
     }
   };
 
@@ -141,7 +142,7 @@ export const UnifiedLoginModal: React.FC<UnifiedLoginModalProps> = ({
             onClose();
           }, 450);
         } else {
-          setErrorMsg(res.message || 'Invalid administrator master key. Use "admin2026".');
+          setErrorMsg(res.message || 'Invalid administrator master key or passcode.');
         }
       } catch (err) {
         setErrorMsg('Authentication service unavailable. Please check your credentials.');
@@ -439,7 +440,7 @@ export const UnifiedLoginModal: React.FC<UnifiedLoginModalProps> = ({
                         {isRtl ? 'المفتاح الرئيسي / كلمة المرور' : 'Master Key / Password'}
                       </label>
                       <span className="text-[11px] text-amber-400 font-mono">
-                        Demo: admin2026
+                        {isRtl ? 'مفتاح الإدارة' : 'HQ Master Key'}
                       </span>
                     </div>
                     <div className="relative flex items-center">
