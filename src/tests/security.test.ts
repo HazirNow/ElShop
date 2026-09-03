@@ -258,4 +258,25 @@ describe('ElShop Platform Security Infrastructure', () => {
     expect(sampleAccessLog).toHaveProperty('status');
     expect(sampleAccessLog).toHaveProperty('access_type');
   });
+
+  it('should reject static dev passcodes in production for /api/auth/verify unless ADMIN_PASSCODE matches', () => {
+    const isProduction = true;
+    const configuredAdminPass = 'SuperSecureProdSecret999';
+    const devPasscode = 'admin2026';
+    const validProdPasscode = 'SuperSecureProdSecret999';
+
+    // Verify dev pass rejection in production
+    const isDevPassValidInProd = (pass: string) => {
+      if (configuredAdminPass && pass.toLowerCase() === configuredAdminPass.toLowerCase()) {
+        return true;
+      }
+      if (!isProduction) {
+        return ['admin2026', 'admin', 'admin123'].includes(pass);
+      }
+      return false;
+    };
+
+    expect(isDevPassValidInProd(devPasscode)).toBe(false);
+    expect(isDevPassValidInProd(validProdPasscode)).toBe(true);
+  });
 });

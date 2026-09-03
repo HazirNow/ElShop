@@ -408,8 +408,18 @@ async function startServer() {
 
       if (role === 'admin') {
         const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.socket.remoteAddress || '127.0.0.1';
-        const adminKeys = ['admin2026', 'admin', 'admin123'];
-        if (adminKeys.includes(cleanPass)) {
+        const isProduction = process.env.NODE_ENV === 'production';
+        const configuredAdminPass = process.env.ADMIN_PASSCODE || process.env.SUPERADMIN_SECRET;
+
+        let isValidAdmin = false;
+        if (configuredAdminPass && cleanPass === configuredAdminPass.trim().toLowerCase()) {
+          isValidAdmin = true;
+        } else if (!isProduction) {
+          const devAdminKeys = ['admin2026', 'admin', 'admin123'];
+          isValidAdmin = devAdminKeys.includes(cleanPass);
+        }
+
+        if (isValidAdmin) {
           logSuperadminAccess({
             ip: clientIp,
             status: 'success',
@@ -425,7 +435,7 @@ async function startServer() {
           access_type: 'superadmin_auth',
           endpoint: '/api/auth/verify',
           method: 'POST',
-          reason: 'INVALID_MASTER_KEY',
+          reason: isProduction && !configuredAdminPass ? 'MISSING_PRODUCTION_SECRET' : 'INVALID_MASTER_KEY',
         });
         return res.status(401).json({ success: false, message: 'Invalid Admin Master Key' });
       }
