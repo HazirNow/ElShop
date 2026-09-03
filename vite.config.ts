@@ -7,11 +7,13 @@ export default defineConfig({
   base: './',
   plugins: [react(), tailwindcss()],
   build: {
-    chunkSizeWarningLimit: 1200,
+    chunkSizeWarningLimit: 500,
     rollupOptions: {
       output: {
         manualChunks(id) {
-          // Node modules vendor splitting
+          if (id.includes('InteractiveSimulationEngine') || id.includes('PilotTrainingOverlay')) {
+            return 'sandbox-onboarding-simulation';
+          }
           if (id.includes('node_modules')) {
             if (id.includes('react/') || id.includes('react-dom/')) {
               return 'vendor-react';
@@ -31,8 +33,8 @@ export default defineConfig({
             if (id.includes('html5-qrcode')) {
               return 'vendor-scanner';
             }
+            return 'vendor-core-frameworks';
           }
-          // Application feature-based code splitting
           if (id.includes('src/components/AdminDashboard') || id.includes('src/components/admin/')) {
             return 'admin-dashboard';
           }
