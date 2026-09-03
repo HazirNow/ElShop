@@ -24,6 +24,7 @@ import { Product, CustomerProfile, Store, Language } from '../types';
 import { useOfflineSync } from '../lib/useOfflineSync';
 import { calculateCustomerKhataBalance } from '../khataUtils';
 import { CameraBarcodeScanner } from './CameraBarcodeScanner';
+import { notifyError } from '../utils/errorHandler';
 
 interface Props {
   isOpen: boolean;
@@ -178,7 +179,7 @@ export const OfflineCounterOrderModal: React.FC<Props> = ({
         onClose();
       }, 1400);
     } catch (err) {
-      console.error('[OfflineOrderModal] Order processing error:', err);
+      notifyError(err, 'Failed to process counter order');
     } finally {
       setIsSubmitting(false);
     }

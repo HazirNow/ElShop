@@ -14,6 +14,7 @@ import {
 import { Store, Language } from '../types';
 import { useTierAccess } from '../hooks/useTierAccess';
 import { updateStore } from '../api';
+import { notifyError } from '../utils/errorHandler';
 
 interface Props {
   store: Store;
@@ -51,7 +52,7 @@ export const StaffManagementView: React.FC<Props> = ({
       setTimeout(() => setSaveSuccess(false), 3000);
       onRefresh();
     } catch (e) {
-      console.error('Failed to update staff PINs:', e);
+      notifyError(e, 'Failed to update staff security PINs');
     } finally {
       setIsSaving(false);
     }

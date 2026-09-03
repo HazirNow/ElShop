@@ -24,6 +24,7 @@ import { updateCustomer, settleCustomerKhata } from '../api';
 import { calculateCustomerKhataBalance } from '../khataUtils';
 import { useTierAccess } from '../hooks/useTierAccess';
 import { ElShopLogo } from './ElShopLogo';
+import { notifyError } from '../utils/errorHandler';
 
 interface CustomerCreditAdjustmentModalProps {
   customer: CustomerProfile;
@@ -86,7 +87,7 @@ export const CustomerCreditAdjustmentModal: React.FC<CustomerCreditAdjustmentMod
       setTimeout(() => setSaveSuccess(false), 2500);
       onRefresh();
     } catch (err) {
-      console.error('Failed to update customer credit limit:', err);
+      notifyError(err, 'Failed to update customer credit limit');
     } finally {
       setIsSaving(false);
     }
@@ -111,7 +112,7 @@ export const CustomerCreditAdjustmentModal: React.FC<CustomerCreditAdjustmentMod
       setTimeout(() => setSettleSuccess(false), 3000);
       onRefresh();
     } catch (err) {
-      console.error('Failed to settle khata:', err);
+      notifyError(err, 'Failed to record Khata settlement');
     } finally {
       setIsSettling(false);
     }

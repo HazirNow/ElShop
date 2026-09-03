@@ -22,6 +22,7 @@ import {
 import { AppState, Store, Language, Order } from '../types';
 import { submitSettlement } from '../api';
 import { formatWhatsAppNumber, formatWhatsAppDeepLink } from '../lib/whatsapp';
+import { notifyError } from '../utils/errorHandler';
 
 interface Props {
   isOpen: boolean;
@@ -237,7 +238,7 @@ export const ShiftReconciliationModal: React.FC<Props> = ({
         onClose();
       }, 1400);
     } catch (err) {
-      console.error('Reconciliation submission error:', err);
+      notifyError(err, 'Reconciliation submission failed');
     } finally {
       setIsSubmitting(false);
     }

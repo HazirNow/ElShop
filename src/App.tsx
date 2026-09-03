@@ -23,11 +23,13 @@ import {
   AlertCircle,
   Scale,
   Home,
-  LayoutDashboard
+  LayoutDashboard,
+  AlertTriangle
 } from 'lucide-react';
 import { AppState, Role, Language, Store } from './types';
 import { fetchState, resetDatabase, getCachedState } from './api';
 import { syncStateToIndexedDb } from './lib/offlineDb';
+import { registerToastListener, notifyError, ToastType } from './utils/errorHandler';
 import { CustomerView } from './components/CustomerView';
 import { RiderView } from './components/RiderView';
 import { LandingPage } from './components/LandingPage';
@@ -57,7 +59,8 @@ export default function App() {
   const [activeCustomerId, setActiveCustomerId] = useState<string>('cust-1');
   const [lang, setLang] = useState<Language>('en');
   const [isResetting, setIsResetting] = useState(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
+  const toastTimerRef = React.useRef<NodeJS.Timeout | null>(null);
   const [showStaffAuth, setShowStaffAuth] = useState(false);
   const [showMerchantLanding, setShowMerchantLanding] = useState(false);
 
@@ -108,15 +111,29 @@ export default function App() {
     return () => clearInterval(interval);
   }, [loadState]);
 
+  const showToast = useCallback((msg: string, type: ToastType = 'success', duration: number = 3200) => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setToast({ message: msg, type });
+    toastTimerRef.current = setTimeout(() => setToast(null), duration);
+  }, []);
+
+  // Listen to global centralized error and toast notifications across all components
+  useEffect(() => {
+    const unregister = registerToastListener((payload) => {
+      showToast(payload.message, payload.type, payload.duration || 3500);
+    });
+    return () => unregister();
+  }, [showToast]);
+
   const handleResetData = async () => {
     if (!window.confirm(t('resetConfirm'))) return;
     setIsResetting(true);
     try {
       const resetState = await resetDatabase();
       setAppState(resetState);
-      showToast('Database reset to initial seed state');
+      showToast('Database reset to initial seed state', 'success');
     } catch (err) {
-      console.error(err);
+      notifyError(err, 'Failed to reset database to initial seed state.');
     } finally {
       setIsResetting(false);
     }
@@ -157,11 +174,6 @@ export default function App() {
     setActiveRole('customer');
     setViewMode('landing');
     showToast('Signed out. Returned to Home.');
-  };
-
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
   };
 
   const openLegalModal = (tab: 'terms' | 'privacy' | 'disclaimers') => {
@@ -431,10 +443,25 @@ export default function App() {
       )}
 
       {/* Toast Notification Banner */}
-      {toastMessage && (
-        <div className="bg-indigo-600 text-white text-xs font-bold py-2 px-4 text-center shadow-md animate-fade-in flex items-center justify-center gap-2">
-          <CheckCircle2 className="w-4 h-4" />
-          <span>{toastMessage}</span>
+      {toast && (
+        <div
+          role="alert"
+          className={`text-xs font-bold py-2.5 px-4 text-center shadow-lg transition-all flex items-center justify-center gap-2 ${
+            toast.type === 'error'
+              ? 'bg-rose-600 text-white border-b border-rose-700'
+              : toast.type === 'warning'
+              ? 'bg-amber-600 text-white border-b border-amber-700'
+              : 'bg-indigo-600 text-white border-b border-indigo-700'
+          }`}
+        >
+          {toast.type === 'error' ? (
+            <AlertCircle className="w-4 h-4 shrink-0" />
+          ) : toast.type === 'warning' ? (
+            <AlertTriangle className="w-4 h-4 shrink-0" />
+          ) : (
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+          )}
+          <span>{toast.message}</span>
         </div>
       )}
 

@@ -253,6 +253,51 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
 
   // Optimistic stock override dictionary for zero-lag UI stock updates
   const [optimisticStockOverrides, setOptimisticStockOverrides] = useState<Record<string, number>>({});
+  // Track in-flight stock update targets per product ID to prevent stale polling overwrites
+  const inFlightStockRequests = useRef<Map<string, number>>(new Map());
+
+  // Reconcile optimistic stock overrides immediately upon receipt of a fresh polling response
+  useEffect(() => {
+    if (!state?.products) return;
+
+    setOptimisticStockOverrides((prev) => {
+      const keys = Object.keys(prev);
+      if (keys.length === 0) return prev;
+
+      let changed = false;
+      const next = { ...prev };
+
+      for (const productId of keys) {
+        const serverProd = state.products.find((p) => p.id === productId);
+        const inFlightTarget = inFlightStockRequests.current.get(productId);
+
+        if (!serverProd) {
+          // Product was removed on the server; purge stale override
+          delete next[productId];
+          changed = true;
+          continue;
+        }
+
+        // 1. If server polling response matches the optimistic override value,
+        // the server state has caught up, so the override can be safely cleared.
+        if (serverProd.stock === prev[productId]) {
+          delete next[productId];
+          changed = true;
+          continue;
+        }
+
+        // 2. If this product does NOT have an in-flight server mutation pending,
+        // the fresh polling response is authoritative: reconcile immediately to prevent UI divergence.
+        if (inFlightTarget === undefined) {
+          delete next[productId];
+          changed = true;
+          continue;
+        }
+      }
+
+      return changed ? next : prev;
+    });
+  }, [state?.products]);
 
   // Low-Stock Alert System State
   const [showLowStockAlerts, setShowLowStockAlerts] = useState<boolean>(true);
@@ -261,14 +306,19 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
   const [editingThresholdProduct, setEditingThresholdProduct] = useState<Product | null>(null);
   const [thresholdInputVal, setThresholdInputVal] = useState<string>('5');
 
-  // Low-Stock Helper Functions
+  // Stock & Low-Stock Helper Functions
+  const getEffectiveStock = (p: Product): number => {
+    return optimisticStockOverrides[p.id] !== undefined ? optimisticStockOverrides[p.id] : p.stock;
+  };
+
   const getProductThreshold = (p: Product): number => {
     return p.lowStockThreshold !== undefined ? p.lowStockThreshold : (defaultStockThreshold || 5);
   };
 
   const isProductLowStock = (p: Product): boolean => {
     const thresh = getProductThreshold(p);
-    return p.inStock && p.stock > 0 && p.stock < thresh;
+    const effectiveStock = getEffectiveStock(p);
+    return (p.inStock || effectiveStock > 0) && effectiveStock > 0 && effectiveStock < thresh;
   };
 
   const lowStockProducts = storeProducts.filter(isProductLowStock);
@@ -692,13 +742,12 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
   };
 
   const handleProductStockDelta = async (product: Product, delta: number) => {
-    const currentStock = optimisticStockOverrides[product.id] !== undefined 
-      ? optimisticStockOverrides[product.id] 
-      : product.stock;
+    const currentStock = getEffectiveStock(product);
     const nextStock = Math.max(0, currentStock + delta);
     
     // Instant local optimistic update for zero-latency response
     setOptimisticStockOverrides((prev) => ({ ...prev, [product.id]: nextStock }));
+    inFlightStockRequests.current.set(product.id, nextStock);
 
     // Haptic feedback if supported on mobile POS devices
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
@@ -708,10 +757,27 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
     }
 
     try {
-      await updateProduct(product.id, { stock: nextStock, inStock: nextStock > 0 });
+      const updatedProduct = await updateProduct(product.id, { stock: nextStock, inStock: nextStock > 0 });
+      
+      // Clear in-flight tracking marker
+      inFlightStockRequests.current.delete(product.id);
+
+      // Reconcile optimistic override immediately upon receipt of successful server update
+      setOptimisticStockOverrides((prev) => {
+        if (!(product.id in prev)) return prev;
+        // If current override still matches the confirmed stock level (no newer click intervened)
+        if (prev[product.id] === nextStock || (updatedProduct && prev[product.id] === updatedProduct.stock)) {
+          const next = { ...prev };
+          delete next[product.id];
+          return next;
+        }
+        return prev;
+      });
+
       onRefresh();
     } catch (err) {
       console.error('Failed to update product stock:', err);
+      inFlightStockRequests.current.delete(product.id);
       // Revert optimistic override on network failure
       setOptimisticStockOverrides((prev) => {
         const copy = { ...prev };
@@ -782,6 +848,7 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
         delete copy[editingFullProduct.id];
         return copy;
       });
+      inFlightStockRequests.current.delete(editingFullProduct.id);
       setEditingFullProduct(null);
       onRefresh();
     } catch (err) {
@@ -1360,7 +1427,7 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
                     {/* Low stock SKU pills with 1-click Quick Restock */}
                     <div className="flex flex-wrap items-center gap-1.5 mt-2">
                       {lowStockProducts.slice(0, 5).map((lp) => {
-                        const lpStock = optimisticStockOverrides[lp.id] !== undefined ? optimisticStockOverrides[lp.id] : lp.stock;
+                        const lpStock = getEffectiveStock(lp);
                         return (
                           <div
                             key={lp.id}
@@ -1598,7 +1665,7 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
                 return true;
               })
               .map((p) => {
-                const pStock = optimisticStockOverrides[p.id] !== undefined ? optimisticStockOverrides[p.id] : p.stock;
+                const pStock = getEffectiveStock(p);
                 const threshold = getProductThreshold(p);
                 const isLowStock = (p.inStock || pStock > 0) && pStock > 0 && pStock < threshold;
                 const isOutOfStock = !p.inStock || pStock === 0;

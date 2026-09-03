@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { AppState, Order, Rider, Language } from '../types';
 import { updateOrder, getBatchedRiderTasks, BatchedBuildingRun } from '../api';
+import { notifyError } from '../utils/errorHandler';
 import { getTranslation } from '../translations';
 import { ProductImage } from './ProductImage';
 import { generateRiderToCustomerWhatsAppLink, generateDeliveredReceiptWhatsAppLink } from '../lib/whatsapp';
@@ -228,7 +229,7 @@ export const RiderView: React.FC<Props> = ({ state, activeStoreId, lang, onRefre
         onRefresh();
       }, 1200);
     } catch (err) {
-      console.error(err);
+      notifyError(err, 'Failed to update delivery status');
     }
   };
 

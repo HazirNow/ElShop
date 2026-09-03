@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 import { AppState, Order, Product, ProductCategory, CustomerProfile, Language } from '../types';
 import { createOrder, sendChatMessage } from '../api';
+import { notifyError } from '../utils/errorHandler';
 import { calculateCustomerKhataBalance } from '../khataUtils';
 import { getTranslation, getCategoryName } from '../translations';
 import { ProductImage } from './ProductImage';
@@ -312,7 +313,7 @@ export const CustomerView: React.FC<Props> = ({
       setShowCatalog(false);
       onRefresh();
     } catch (err) {
-      console.error(err);
+      notifyError(err, 'Failed to place order');
     }
   };
 
@@ -326,7 +327,7 @@ export const CustomerView: React.FC<Props> = ({
       setChatInput('');
       onRefresh();
     } catch (err) {
-      console.error(err);
+      notifyError(err, 'Failed to send chat message');
     }
   };
 

@@ -76,3 +76,115 @@ describe('Rider Delivery Batching Alignment', () => {
     expect(selectedInput).toBe("Tower C");
   });
 });
+
+// 4. TEST SUITE: Optimistic Stock Overrides Reconciliation (Server Update & Polling)
+describe('MerchantView Optimistic Stock Overrides Reconciliation', () => {
+  // Reusable reconciliation function mirroring MerchantView logic
+  const reconcileOnPolling = (
+    currentOverrides: Record<string, number>,
+    serverProducts: Array<{ id: string; stock: number }>,
+    inFlightStockRequests: Map<string, number>
+  ): Record<string, number> => {
+    const keys = Object.keys(currentOverrides);
+    if (keys.length === 0) return currentOverrides;
+
+    let changed = false;
+    const next = { ...currentOverrides };
+
+    for (const productId of keys) {
+      const serverProd = serverProducts.find((p) => p.id === productId);
+      const inFlightTarget = inFlightStockRequests.get(productId);
+
+      if (!serverProd) {
+        delete next[productId];
+        changed = true;
+        continue;
+      }
+
+      // 1. If server polling response matches the optimistic override value
+      if (serverProd.stock === currentOverrides[productId]) {
+        delete next[productId];
+        changed = true;
+        continue;
+      }
+
+      // 2. If this product does NOT have an in-flight server mutation pending
+      if (inFlightTarget === undefined) {
+        delete next[productId];
+        changed = true;
+        continue;
+      }
+    }
+
+    return changed ? next : currentOverrides;
+  };
+
+  const reconcileOnServerSuccess = (
+    currentOverrides: Record<string, number>,
+    productId: string,
+    targetStock: number,
+    serverConfirmedStock: number
+  ): Record<string, number> => {
+    if (!(productId in currentOverrides)) return currentOverrides;
+    if (currentOverrides[productId] === targetStock || currentOverrides[productId] === serverConfirmedStock) {
+      const next = { ...currentOverrides };
+      delete next[productId];
+      return next;
+    }
+    return currentOverrides;
+  };
+
+  it('should reconcile optimistic stock overrides immediately upon receipt of successful server update', () => {
+    let overrides: Record<string, number> = { 'prod-1': 10, 'prod-2': 5 };
+    
+    // Server confirms prod-1 stock updated to 10
+    overrides = reconcileOnServerSuccess(overrides, 'prod-1', 10, 10);
+    
+    expect(overrides['prod-1']).toBeUndefined();
+    expect(overrides['prod-2']).toBe(5);
+  });
+
+  it('should preserve newer in-flight optimistic adjustments when an earlier server response arrives', () => {
+    // User clicked +1 (5 -> 6), then quickly +1 again (6 -> 7)
+    let overrides: Record<string, number> = { 'prod-1': 7 };
+    
+    // First server response arrives with stock: 6 (earlier request)
+    overrides = reconcileOnServerSuccess(overrides, 'prod-1', 6, 6);
+    
+    // Since current override is 7 (newer click in-flight), it must NOT be wiped out prematurely
+    expect(overrides['prod-1']).toBe(7);
+
+    // Second server response arrives with stock: 7
+    overrides = reconcileOnServerSuccess(overrides, 'prod-1', 7, 7);
+    expect(overrides['prod-1']).toBeUndefined();
+  });
+
+  it('should reconcile optimistic overrides when fresh polling response matches confirmed server stock', () => {
+    const overrides: Record<string, number> = { 'prod-1': 12 };
+    const serverProducts = [{ id: 'prod-1', stock: 12 }];
+    const inFlight = new Map<string, number>();
+
+    const reconciled = reconcileOnPolling(overrides, serverProducts, inFlight);
+    expect(reconciled['prod-1']).toBeUndefined();
+  });
+
+  it('should reconcile and clear non-in-flight stale overrides upon fresh polling response to prevent UI divergence', () => {
+    // Override was set to 15, but external purchase reduced stock to 8 on the backend
+    const overrides: Record<string, number> = { 'prod-1': 15 };
+    const serverProducts = [{ id: 'prod-1', stock: 8 }];
+    const inFlight = new Map<string, number>(); // Not currently in flight
+
+    const reconciled = reconcileOnPolling(overrides, serverProducts, inFlight);
+    expect(reconciled['prod-1']).toBeUndefined(); // Reconciles immediately to server truth
+  });
+
+  it('should NOT prematurely clear in-flight overrides when a stale background poll arrives', () => {
+    // Merchant just clicked +1 to 6; request is in flight
+    const overrides: Record<string, number> = { 'prod-1': 6 };
+    const staleServerProducts = [{ id: 'prod-1', stock: 5 }];
+    const inFlight = new Map<string, number>([['prod-1', 6]]); // Active in flight mutation
+
+    const reconciled = reconcileOnPolling(overrides, staleServerProducts, inFlight);
+    expect(reconciled['prod-1']).toBe(6); // Protected from stale polling overwrite
+  });
+});

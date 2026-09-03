@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { Store as StoreType, Language } from '../types';
 import { updateStore } from '../api';
+import { notifyError } from '../utils/errorHandler';
 
 interface Props {
   isOpen: boolean;
@@ -123,7 +124,7 @@ export const UpgradePlanModal: React.FC<Props> = ({
         onClose();
       }, 1200);
     } catch (err) {
-      console.error('Failed to update subscription tier:', err);
+      notifyError(err, 'Failed to update subscription tier');
     } finally {
       setIsUpdating(false);
     }

@@ -29,6 +29,7 @@ import {
 import { Language, Store } from '../types';
 import { createStore } from '../api';
 import { ElShopLogo } from './ElShopLogo';
+import { notifyError } from '../utils/errorHandler';
 
 interface MerchantLandingModalProps {
   isOpen: boolean;
@@ -104,8 +105,7 @@ export const MerchantLandingModal: React.FC<MerchantLandingModalProps> = ({
 
       setCreatedStoreData(newStore);
     } catch (err) {
-      console.error('Failed to create store:', err);
-      alert(isRtl ? 'حدث خطأ أثناء تسجيل المتجر' : 'Failed to register store. Please try again.');
+      notifyError(err, isRtl ? 'حدث خطأ أثناء تسجيل المتجر' : 'Failed to register store. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

@@ -22,6 +22,7 @@ import {
 import { Product, Order, Language, ProductCategory } from '../types';
 import { ProductImage } from './ProductImage';
 import { updateProduct } from '../api';
+import { notifyError } from '../utils/errorHandler';
 
 interface DeadStockAnalysisModalProps {
   isOpen: boolean;
@@ -165,7 +166,7 @@ export const DeadStockAnalysisModal: React.FC<DeadStockAnalysisModalProps> = ({
       );
       setTimeout(() => setSuccessToast(null), 3500);
     } catch (err) {
-      console.error('Failed to apply discount', err);
+      notifyError(err, 'Failed to apply promotional discount');
     } finally {
       setApplyingDiscountId(null);
     }

@@ -25,6 +25,7 @@ import {
 import { Product, ProductCategory, Language } from '../types';
 import { playScannerBeep, playScannerWarningBeep } from '../lib/audio';
 import { createProduct } from '../api';
+import { notifyError } from '../utils/errorHandler';
 
 // Common UAE Baqala test barcodes for quick testing without physical packaging
 export const QUICK_TEST_BARCODES = [
@@ -320,7 +321,7 @@ export const CameraBarcodeScanner: React.FC<CameraBarcodeScannerProps> = ({
         }
       }
     } catch (err: any) {
-      console.error('Failed to quick-add product:', err);
+      notifyError(err, 'Failed to quick-add product');
       setQuickAddError(err?.message || (isRtl ? 'فشل حفظ المنتج الجديد' : 'Failed to register product'));
     } finally {
       setQuickAddSaving(false);
