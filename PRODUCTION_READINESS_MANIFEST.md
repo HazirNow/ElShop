@@ -172,14 +172,51 @@ Execute the zero-downtime non-blocking migration script with targeted query plan
 ./tools/staging-rollout.sh
 ```
 
-### Step 4: Structured JSON Telemetry Auditing (stdout)
+### Step 4: Google Cloud Run Production Deployment (`deploy-elshop.sh`)
+Execute the automated, zero-credential-exfiltration 10-phase production deployment script targeted at Dubai/Middle East (`me-central1`):
+
+```bash
+# 1. Export target project and region
+export GCP_PROJECT_ID="elshop-pilot-uae"
+export GCP_REGION="me-central1"
+
+# 2. Provision required Secret Manager secrets (one-time)
+echo "your-merchant-pin"   | gcloud secrets create admin-passcode --data-file=-
+echo "your-superadmin-key" | gcloud secrets create superadmin-secret --data-file=-
+echo "postgresql://..."    | gcloud secrets create database-url --data-file=-
+
+# 3. Launch hardened deployment pipeline
+chmod +x deploy-elshop.sh
+./deploy-elshop.sh
+```
+
+**10-Phase Deployment Gates Executed:**
+1. **Prerequisite Verification**: Validates CLI tooling (`gcloud`, `docker`, `npm`, `jq`), Secret Manager access, and Artifact Registry repository existence.
+2. **Code Validation & Hygiene**: Runs TypeScript compiler (`npm run lint`), checks tests, and verifies zero hardcoded private keys.
+3. **Production Bundle Compilation**: Compiles Vite SPA frontend and bundled Node CommonJS server (`dist/server.cjs`).
+4. **Multi-Stage Container Build & Push**: Builds Docker container with BuildKit caching and pushes to `${REGION}-docker.pkg.dev/${PROJECT_ID}/elshop-containers/elshop-pilot:v1.0.0-pilot`.
+5. **Cloud Run Blue-Green Deployment**: Deploys with `--ingress all`, `--session-affinity`, `--min-instances 1` (eliminates POS morning cold-starts), and mounts Secret Manager secrets natively.
+6. **Post-Deployment Health Validation**: Automated polling loop against live `$SERVICE_URL/api/health` checking for HTTP 200 and `{ "status": "ok" }`.
+7. **Artifact & Environment Verification**: Confirms active revision and validates environment variables.
+8. **Cloud Monitoring & Error Sinks**: Sets up Cloud Logging filters for rapid incident response.
+9. **Rollback Procedures**: Pre-computes instant 1-command traffic reversion commands.
+10. **Final Launch Report**: Emits complete operational summary for store tablets, riders, and cashier registers.
+
+### Step 5: Cash Drawer & POS Device Audit Verification
+Verify cashier float and discrepancy auditing pipeline:
+- Register telemetry schema: `src/mock_device_state.json`
+- PowerShell & Bash audit export pipeline: `./export-audit-trail.ps1`
+- Generated financial audit ledger: `pilot_cash_reconciliation_audit.csv`
+- Storage isolation key: `pilot_cash_audit_trail_{storeId}`
+
+### Step 6: Structured JSON Telemetry Auditing (stdout)
 Stream and verify JSON logs for offline sync and administrative access:
 ```bash
 tail -F stdout.log | jq -c 'select(.event=="OFFLINE_SYNC_LOOP_SUMMARY")'
 tail -F stdout.log | jq -c 'select(.access_type=="superadmin_global_pulse")'
 ```
 
-### Step 5: Smoke Test Workflow
+### Step 7: Smoke Test Workflow
 1. Load POS terminal at `https://<pilot-domain>/`.
 2. Select **Al Madina Fresh Grocer (store-001)**.
 3. Open **Operational Quick Guide** (`Quick Guide` button in header) and trigger print dialog.

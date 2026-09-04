@@ -361,7 +361,32 @@ curl -sS "https://$STAGE_URL/api/state/metadata" | jq .
 curl -sS -H "x-elshop-admin-secret: $SUPERADMIN_SECRET" "https://$STAGE_URL/api/superadmin/global-pulse" | jq .
 ```
 
-#### 3. Structured JSON Logging Auditing
+#### 3. 🚀 Google Cloud Run Production Deployment (`deploy-elshop.sh`)
+
+For live pilot stores in the UAE (Dubai, Abu Dhabi, Sharjah), use the 10-phase automated deployment script targeted at Google Cloud Run in `me-central1`:
+
+```bash
+# Set target project and region
+export GCP_PROJECT_ID="elshop-pilot-uae"
+export GCP_REGION="me-central1"
+
+# Create required Google Secret Manager credentials (one-time)
+echo "your-merchant-pin"   | gcloud secrets create admin-passcode --data-file=-
+echo "your-superadmin-key" | gcloud secrets create superadmin-secret --data-file=-
+echo "postgresql://..."    | gcloud secrets create database-url --data-file=-
+
+# Run hardened deployment script
+chmod +x deploy-elshop.sh
+./deploy-elshop.sh
+```
+
+**Key Operational Guarantees:**
+- **Zero Credential Exfiltration**: Secrets mounted directly via `--set-secrets` from Secret Manager.
+- **Store POS Availability**: `--ingress all` and `--min-instances 1` ensure zero morning cold-start delay for cashier tablets.
+- **Modern Artifact Registry**: Targets `${REGION}-docker.pkg.dev/${PROJECT_ID}/elshop-containers`.
+- **Instant Rollback**: Instant 1-command traffic shift: `gcloud run services update-traffic elshop-pilot --to-revisions LATEST=0`.
+
+#### 4. Structured JSON Logging Auditing
 All logs are emitted to standard output (`stdout`) as unnested, parseable JSON lines:
 - **Offline Sync Loop Summary (`OFFLINE_SYNC_LOOP_SUMMARY`)**:
   ```json

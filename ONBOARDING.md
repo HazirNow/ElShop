@@ -15,10 +15,12 @@ This guide is designed for store owners, shift managers, cashiers, and delivery 
 ---
 
 ### Step 1: Accessing Your Store Tablet
-1. Open your tablet or phone browser to the ElShop URL.
-2. Select **Merchant Tablet** from the role selector in the top-right corner.
-3. Enter your store staff PIN (`1234` or `5678` for demo access).
-4. Select your active branch (e.g., *Al Bateen Neighborhood Grocery* or *Dubai Marina QuickMart*).
+1. Open your tablet or phone browser to the ElShop URL (e.g., `https://elshop-pilot-xxxxxxxx-me.a.run.app` or your custom domain).
+2. For dedicated counter tablets, tap **Share / Menu** $\rightarrow$ **Add to Home Screen** to launch in full-screen PWA Kiosk mode.
+3. Select **Merchant Tablet** from the role selector in the top-right corner.
+4. Enter your store staff PIN (`1234` or `5678` for demo access).
+5. Select your active branch (e.g., *Al Madina Fresh Grocer* or *Dubai Marina QuickMart*).
+6. **Thermal Printer Setup**: Turn on your 58mm/80mm Bluetooth thermal printer, tap **Connect ESC/POS Printer** in the header, and pair the device. The system will automatically print test receipts and fallback to browser printing if disconnected.
 
 ---
 
