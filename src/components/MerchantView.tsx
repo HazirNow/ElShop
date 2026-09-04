@@ -53,6 +53,7 @@ import { AppState, Order, Product, Rider, Supplier, CustomerProfile, ProductCate
 import { updateOrder, updateProduct, createProduct, deleteProduct, createSupplier, deleteSupplier, submitSettlement, updateCustomer, updateStore } from '../api';
 import { calculateCustomerKhataBalance } from '../khataUtils';
 import { getTranslation } from '../translations';
+import { notifyError } from '../utils/errorHandler';
 import { ProductImage } from './ProductImage';
 import { CameraCaptureModal } from './CameraCaptureModal';
 import { compressImageFile } from '../lib/imageUtils';
@@ -208,7 +209,7 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
       const compressedDataUrl = await compressImageFile(file, 800, 800, 0.85);
       await handlePhotoCaptured(compressedDataUrl);
     } catch (err) {
-      console.error('Failed to process selected image file:', err);
+      notifyError(err, 'Failed to process selected image file');
     } finally {
       e.target.value = '';
     }
@@ -363,7 +364,7 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
       }
       onRefresh();
     } catch (err) {
-      console.error('Failed to update product threshold:', err);
+      notifyError(err, 'Failed to update product threshold');
     }
   };
 
@@ -410,7 +411,7 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
       setEditingSaleProduct(null);
       onRefresh();
     } catch (err) {
-      console.error(err);
+      notifyError(err, 'Failed to update product sale price');
     }
   };
 
@@ -428,7 +429,7 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
       });
       onRefresh();
     } catch (err) {
-      console.error(err);
+      notifyError(err, 'Failed to apply promotional discount');
     }
   };
 
@@ -557,7 +558,7 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
       setShowAddProductModal(false);
       onRefresh();
     } catch (err) {
-      console.error(err);
+      notifyError(err, 'Failed to add product to catalog');
     }
   };
 
@@ -570,7 +571,7 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
         setCameraTargetProduct(null);
         onRefresh();
       } catch (err) {
-        console.error('Failed to update product photo:', err);
+        notifyError(err, 'Failed to update product photo');
       }
     } else {
       setNewProdImage(imageDataUrl);
@@ -583,7 +584,7 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
       await deleteProduct(prodId);
       onRefresh();
     } catch (err) {
-      console.error(err);
+      notifyError(err, 'Failed to delete product');
     }
   };
 
@@ -606,7 +607,7 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
       setNewSupCategory('');
       onRefresh();
     } catch (err) {
-      console.error(err);
+      notifyError(err, 'Failed to create supplier profile');
     }
   };
 
@@ -615,7 +616,7 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
       await deleteSupplier(supId);
       onRefresh();
     } catch (err) {
-      console.error(err);
+      notifyError(err, 'Failed to delete supplier');
     }
   };
 
@@ -678,7 +679,7 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
       await updateOrder(orderId, { status: 'packing' });
       onRefresh();
     } catch (err) {
-      console.error(err);
+      notifyError(err, 'Failed to accept order');
     }
   };
 
@@ -695,7 +696,7 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
       setSelectedOrder(res);
       onRefresh();
     } catch (err) {
-      console.error(err);
+      notifyError(err, 'Failed to update packed items');
     }
   };
 
@@ -710,7 +711,7 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
       setSelectedOrder(null);
       onRefresh();
     } catch (err) {
-      console.error(err);
+      notifyError(err, 'Failed to dispatch order to rider');
     }
   };
 
@@ -727,7 +728,7 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
       }
       onRefresh();
     } catch (err) {
-      console.error(err);
+      notifyError(err, 'Failed to batch dispatch orders');
     }
   };
 
@@ -737,7 +738,7 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
       await updateProduct(product.id, { inStock: nextInStock });
       onRefresh();
     } catch (err) {
-      console.error(err);
+      notifyError(err, 'Failed to toggle product stock');
     }
   };
 
@@ -776,7 +777,7 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
 
       onRefresh();
     } catch (err) {
-      console.error('Failed to update product stock:', err);
+      notifyError(err, 'Failed to update product stock');
       inFlightStockRequests.current.delete(product.id);
       // Revert optimistic override on network failure
       setOptimisticStockOverrides((prev) => {
@@ -852,7 +853,7 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
       setEditingFullProduct(null);
       onRefresh();
     } catch (err) {
-      console.error('Failed to update product details:', err);
+      notifyError(err, 'Failed to update product details');
     }
   };
 
@@ -892,7 +893,7 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
       setSettlementNotes('');
       onRefresh();
     } catch (err) {
-      console.error(err);
+      notifyError(err, 'Failed to submit shift settlement');
     }
   };
 
@@ -2269,7 +2270,7 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
                     });
                     onRefresh();
                   } catch (err) {
-                    console.error('Failed to update customer credit limit:', err);
+                    notifyError(err, 'Failed to update customer credit limit');
                   } finally {
                     setSavingCustId(null);
                   }
@@ -2511,7 +2512,7 @@ export const MerchantView: React.FC<Props> = ({ state, activeStoreId, lang, isLo
                   setTimeout(() => setBrandSaveSuccess(false), 3000);
                   onRefresh();
                 } catch (err) {
-                  console.error('Failed to update store branding:', err);
+                  notifyError(err, 'Failed to update store branding');
                 } finally {
                   setIsSavingBrand(false);
                 }

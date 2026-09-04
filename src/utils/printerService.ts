@@ -3,6 +3,8 @@
  * Formats receipt lines, item details, barcodes, and paper cut commands.
  */
 
+import { notifyError } from './errorHandler';
+
 export interface ReceiptItem {
   name: string;
   qty: number;
@@ -80,7 +82,7 @@ export class ThermalPrinterService {
 
       return !!this.characteristic;
     } catch (err) {
-      console.error('Bluetooth Printer connection error:', err);
+      notifyError(err, 'Bluetooth thermal printer connection failed. Please check device pairing.');
       return false;
     }
   }
@@ -153,7 +155,7 @@ export class ThermalPrinterService {
         await this.characteristic.writeValue(rawBytes);
         return true;
       } catch (err) {
-        console.error('Failed to write to Bluetooth printer:', err);
+        notifyError(err, 'Bluetooth print command failed, using browser print fallback');
       }
     }
 
