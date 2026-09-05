@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { getTierAccess } from '../hooks/useTierAccess';
 import { Store } from '../types';
 import { offlineSyncManager } from '../lib/offlineSyncManager';
+import { calculateOrderFinancials, calculateSettlementVariance, executeKhataSettlement } from '../utils/money';
 
 const processTenantRequest = (tenantId: string | null) => {
   if (!tenantId) throw new Error('ACCESS_DENIED');
@@ -111,6 +112,46 @@ describe('ElShop Core Production Business Logic', () => {
     expect(summaryResult.failed).toBe(0);
 
     logSpy.mockRestore();
+  });
+
+  it('should prevent IEEE 754 floating point drift using Decimal in financial calculations', () => {
+    // 0.1 + 0.2 in standard JS floating point is 0.30000000000000004
+    const floatResult = 0.1 + 0.2;
+    expect(floatResult).not.toBe(0.3);
+
+    // Order financials calculation
+    const orderItems = [
+      { price: 0.1, quantity: 1 },
+      { price: 0.2, quantity: 1 },
+    ];
+    const financials = calculateOrderFinancials(orderItems);
+    expect(financials.subtotal).toBe(0.3);
+    // Delivery fee applies under 25 AED (3.5 AED)
+    expect(financials.deliveryFee).toBe(3.5);
+    expect(financials.total).toBe(3.8);
+
+    // Settlement variance calculation
+    const varianceResult = calculateSettlementVariance(100.05, 100.00);
+    expect(varianceResult.variance).toBe(0.05);
+    expect(varianceResult.isDisputed).toBe(true);
+
+    const exactVariance = calculateSettlementVariance(250.50, 250.50);
+    expect(exactVariance.variance).toBe(0);
+    expect(exactVariance.isDisputed).toBe(false);
+
+    // Khata partial settlement FIFO test
+    const khataOrders = [
+      { id: 'ELS-1', total: 10.25, paidAmount: 0, paymentStatus: 'khata_debited' },
+      { id: 'ELS-2', total: 15.50, paidAmount: 0, paymentStatus: 'khata_debited' }
+    ];
+    const settlement = executeKhataSettlement(25.75, 15.00, khataOrders);
+    expect(settlement.settledAmount).toBe(15.00);
+    expect(settlement.updatedOrders[0].id).toBe('ELS-1');
+    expect(settlement.updatedOrders[0].paidAmount).toBe(10.25);
+    expect(settlement.updatedOrders[0].paymentStatus).toBe('paid');
+    expect(settlement.updatedOrders[1].id).toBe('ELS-2');
+    expect(settlement.updatedOrders[1].paidAmount).toBe(4.75);
+    expect(settlement.updatedOrders[1].paymentStatus).toBe('khata_debited');
   });
 });
 

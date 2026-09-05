@@ -23,6 +23,7 @@ import { AppState, Store, Language, Order } from '../types';
 import { submitSettlement } from '../api';
 import { formatWhatsAppNumber, formatWhatsAppDeepLink } from '../lib/whatsapp';
 import { notifyError } from '../utils/errorHandler';
+import { Decimal, toDecimal, toMoneyNumber, calculateSettlementVariance } from '../utils/money';
 
 interface Props {
   isOpen: boolean;
@@ -77,22 +78,22 @@ export const ShiftReconciliationModal: React.FC<Props> = ({
     return isToday;
   });
 
-  // Calculate Shift System Totals (Calculated in integer fils to avoid floating point drift)
-  const cashSalesFils = deliveredToday
+  // Calculate Shift System Totals using Decimal precision
+  const cashSalesDec = deliveredToday
     .filter((o) => o.paymentMethod === 'cash')
-    .reduce((sum, o) => sum + Math.round((o.total || 0) * 100), 0);
+    .reduce((sum, o) => sum.plus(toDecimal(o.total || 0)), new Decimal(0));
 
-  const cardSalesFils = deliveredToday
+  const cardSalesDec = deliveredToday
     .filter((o) => o.paymentMethod === 'card')
-    .reduce((sum, o) => sum + Math.round((o.total || 0) * 100), 0);
+    .reduce((sum, o) => sum.plus(toDecimal(o.total || 0)), new Decimal(0));
 
-  const khataSalesFils = deliveredToday
+  const khataSalesDec = deliveredToday
     .filter((o) => o.paymentMethod === 'khata')
-    .reduce((sum, o) => sum + Math.round((o.total || 0) * 100), 0);
+    .reduce((sum, o) => sum.plus(toDecimal(o.total || 0)), new Decimal(0));
 
-  const cashSales = cashSalesFils / 100;
-  const cardSales = cardSalesFils / 100;
-  const khataSales = khataSalesFils / 100;
+  const cashSales = toMoneyNumber(cashSalesDec);
+  const cardSales = toMoneyNumber(cardSalesDec);
+  const khataSales = toMoneyNumber(khataSalesDec);
 
   // Opening Float & Payouts State
   const [openingFloatInput, setOpeningFloatInput] = useState<string>('200.00'); // Standard retail opening float (200 AED)
@@ -122,16 +123,13 @@ export const ShiftReconciliationModal: React.FC<Props> = ({
   const [varianceReason, setVarianceReason] = useState<string>('counting_error');
   const [managerNotes, setManagerNotes] = useState<string>('');
 
-  // Float and Payout calculations in fils
-  const parsedFloatAED = parseFloat(openingFloatInput) || 0;
-  const parsedFloatFils = Math.round(parsedFloatAED * 100);
-
-  const parsedPayoutsAED = parseFloat(payoutsInput) || 0;
-  const parsedPayoutsFils = Math.round(parsedPayoutsAED * 100);
+  // Float and Payout calculations in Decimal
+  const parsedFloatAED = toMoneyNumber(toDecimal(openingFloatInput || 0));
+  const parsedPayoutsAED = toMoneyNumber(toDecimal(payoutsInput || 0));
 
   // Expected Cash in Drawer = Float + Cash Sales - Cash Payouts
-  const expectedTotalFils = Math.max(0, parsedFloatFils + cashSalesFils - parsedPayoutsFils);
-  const expectedCash = expectedTotalFils / 100;
+  const expectedCashDec = Decimal.max(0, toDecimal(parsedFloatAED).plus(cashSalesDec).minus(toDecimal(parsedPayoutsAED)));
+  const expectedCash = toMoneyNumber(expectedCashDec);
 
   // Calculate sum from denominations in fils
   const notesFils = UAE_DENOMINATIONS
@@ -154,7 +152,7 @@ export const ShiftReconciliationModal: React.FC<Props> = ({
       return sum + (nextCounts[d.key] || 0) * d.fils;
     }, 0);
 
-    setPhysicalCountInput((nextTotalFils / 100).toFixed(2));
+    setPhysicalCountInput(toMoneyNumber(toDecimal(nextTotalFils).dividedBy(100)).toFixed(2));
   };
 
   const handleClearDenominations = () => {
@@ -164,20 +162,20 @@ export const ShiftReconciliationModal: React.FC<Props> = ({
     setPhysicalCountInput('0.00');
   };
 
-  // Physical count parsed
-  const parsedPhysicalCount = physicalCountInput.trim() !== '' ? parseFloat(physicalCountInput) : null;
-  const actualFils = parsedPhysicalCount !== null ? Math.round(parsedPhysicalCount * 100) : null;
+  // Physical count parsed and Decimal variance calculation
+  const parsedPhysicalCount = physicalCountInput.trim() !== '' ? toMoneyNumber(toDecimal(physicalCountInput)) : null;
 
-  // Variance calculation in integer fils to avoid floating point drift
-  const varianceFils = actualFils !== null ? actualFils - expectedTotalFils : null;
-  const variance = varianceFils !== null ? varianceFils / 100 : null;
+  const varianceInfo = parsedPhysicalCount !== null
+    ? calculateSettlementVariance(parsedPhysicalCount, expectedCash)
+    : null;
 
-  const isBalanced = varianceFils !== null && varianceFils === 0;
-  const isShort = varianceFils !== null && varianceFils < 0;
-  const isOver = varianceFils !== null && varianceFils > 0;
+  const variance = varianceInfo ? varianceInfo.variance : null;
+  const isBalanced = varianceInfo ? varianceInfo.variance === 0 : false;
+  const isShort = varianceInfo ? varianceInfo.variance < 0 : false;
+  const isOver = varianceInfo ? varianceInfo.variance > 0 : false;
 
   const handleApproveReconciliation = async () => {
-    if (parsedPhysicalCount === null || varianceFils === null) return;
+    if (parsedPhysicalCount === null || variance === null) return;
     setIsSubmitting(true);
     try {
       // 1. Submit Settlement API Record
@@ -202,12 +200,12 @@ export const ShiftReconciliationModal: React.FC<Props> = ({
           hardwareToken: effectiveHardwareToken,
           shiftType,
           cashierName,
-          openingFloatFils: parsedFloatFils,
-          cashSalesFils,
-          payoutsFils: parsedPayoutsFils,
-          expectedFils: expectedTotalFils,
-          actualFils,
-          varianceFils,
+          openingFloatFils: Math.round(parsedFloatAED * 100),
+          cashSalesFils: Math.round(cashSales * 100),
+          payoutsFils: Math.round(parsedPayoutsAED * 100),
+          expectedFils: Math.round(expectedCash * 100),
+          actualFils: Math.round((parsedPhysicalCount || 0) * 100),
+          varianceFils: Math.round((variance || 0) * 100),
           reason: isBalanced 
             ? 'Shift closed — 100% exact cash drawer match' 
             : `${varianceReason.replace(/_/g, ' ')} (${variance! >= 0 ? '+' : ''}${variance!.toFixed(2)} AED)`,

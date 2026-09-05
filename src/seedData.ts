@@ -1,5 +1,12 @@
 import { AppState, Store, Product, CustomerProfile, Order, Rider, Settlement, Supplier } from './types';
 
+// Helper to generate dynamic relative dates for realistic pilot simulation
+export const getRelativeDate = (offsetDays: number): string => {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  return d.toISOString().split('T')[0];
+};
+
 export const INITIAL_SUPPLIERS: Supplier[] = [
   {
     id: 'sup-1',
@@ -77,11 +84,11 @@ export const INITIAL_STORES: Store[] = [
     hasDispute: false,
     paymentStatus: 'overdue',
     overdueDays: 4,
-    overdueDueDate: '2026-08-16',
+    overdueDueDate: getRelativeDate(-4),
     servicePaused: false, // Under 10 days, warning active
     adminExplicitOverride: false,
     reminderCount: 1,
-    lastReminderSentAt: '2026-08-18T10:30:00Z',
+    lastReminderSentAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
   },
   {
     id: 'store-3',
@@ -102,11 +109,11 @@ export const INITIAL_STORES: Store[] = [
     hasDispute: false,
     paymentStatus: 'overdue',
     overdueDays: 12,
-    overdueDueDate: '2026-08-08',
+    overdueDueDate: getRelativeDate(-12),
     servicePaused: true, // Over 10 days, automatically paused!
     adminExplicitOverride: false,
     reminderCount: 3,
-    lastReminderSentAt: '2026-08-19T14:15:00Z',
+    lastReminderSentAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
   },
 ];
 
@@ -192,7 +199,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     image: 'https://images.unsplash.com/photo-1563636619-e9143da7973b?auto=format&fit=crop&w=400&q=80',
     supplierId: 'sup-1',
     supplierPhone: '+971 50 111 2222',
-    expiryDate: '2026-08-16', // Expiring in 3 days!
+    expiryDate: getRelativeDate(5), // Expiring in 5 days (Fresh milk)
   },
   {
     id: 'p102',
@@ -211,7 +218,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     lowStockThreshold: 5,
     inStock: true,
     image: 'https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f?auto=format&fit=crop&w=400&q=80',
-    expiryDate: '2026-08-28',
+    expiryDate: getRelativeDate(14), // Expiring in 14 days
   },
   {
     id: 'p103',
@@ -235,7 +242,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     image: 'https://images.unsplash.com/photo-1589985270826-4b7bb135bc9d?auto=format&fit=crop&w=400&q=80',
     supplierId: 'sup-1',
     supplierPhone: '+971 50 111 2222',
-    expiryDate: '2026-08-18', // Expiring in 5 days
+    expiryDate: getRelativeDate(7), // Expiring in 7 days
   },
   {
     id: 'p104',
@@ -256,7 +263,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=400&q=80',
     supplierId: 'sup-2',
     supplierPhone: '+971 55 333 4444',
-    expiryDate: '2026-08-15', // Expiring in 2 days!
+    expiryDate: getRelativeDate(3), // Expiring in 3 days
   },
   {
     id: 'p105',
@@ -280,7 +287,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     image: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=400&q=80',
     supplierId: 'sup-2',
     supplierPhone: '+971 55 333 4444',
-    expiryDate: '2026-08-14', // Expiring tomorrow!
+    expiryDate: getRelativeDate(2), // Expiring in 2 days
   },
   {
     id: 'p105_expired',
@@ -300,7 +307,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     image: 'https://images.unsplash.com/photo-1571212515416-fef01fc43637?auto=format&fit=crop&w=400&q=80',
     supplierId: 'sup-1',
     supplierPhone: '+971 50 111 2222',
-    expiryDate: '2026-08-10', // EXPIRED 3 days ago!
+    expiryDate: getRelativeDate(-3), // EXPIRED 3 days ago for loss prevention audit demo
   },
   {
     id: 'p106',

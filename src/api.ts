@@ -1,6 +1,11 @@
 import { AppState, Order, Product, Settlement, Supplier, CustomerProfile, Store } from './types';
 import { INITIAL_APP_STATE } from './seedData';
 import { calculateCustomerKhataBalance } from './khataUtils';
+import {
+  calculateOrderFinancials,
+  calculateSettlementVariance,
+  executeKhataSettlement,
+} from './utils/money';
 
 const CACHE_KEY = 'elshop_offline_app_state_v1';
 
@@ -137,9 +142,7 @@ export async function createOrder(payload: {
   }
 
   const cached = getCachedState();
-  const subtotal = payload.items.reduce((acc, item) => acc + item.price * item.quantity, 0);
-  const deliveryFee = subtotal < 25 ? 3.5 : 0;
-  const total = subtotal + deliveryFee;
+  const { subtotal, deliveryFee, total } = calculateOrderFinancials(payload.items);
   const newId = `ELS-${1000 + cached.orders.length + 1}`;
 
   const newOrder: Order = {
@@ -151,9 +154,9 @@ export async function createOrder(payload: {
     building: payload.building,
     unit: payload.unit,
     items: payload.items,
-    subtotal: parseFloat(subtotal.toFixed(2)),
-    deliveryFee: parseFloat(deliveryFee.toFixed(2)),
-    total: parseFloat(total.toFixed(2)),
+    subtotal,
+    deliveryFee,
+    total,
     paymentMethod: payload.paymentMethod,
     paymentStatus: payload.paymentMethod === 'card' ? 'paid' : payload.paymentMethod === 'khata' ? 'khata_debited' : 'pending',
     status: 'placed',
@@ -270,11 +273,10 @@ export async function appendOrderItems(
     }
   });
 
-  const subtotal = order.items.reduce((sum, it) => sum + it.price * it.quantity, 0);
-  const deliveryFee = subtotal < 25 ? 3.5 : 0;
-  order.subtotal = parseFloat(subtotal.toFixed(2));
-  order.deliveryFee = parseFloat(deliveryFee.toFixed(2));
-  order.total = parseFloat((subtotal + deliveryFee).toFixed(2));
+  const { subtotal, deliveryFee, total } = calculateOrderFinancials(order.items);
+  order.subtotal = subtotal;
+  order.deliveryFee = deliveryFee;
+  order.total = total;
 
   order.chatMessages.push({
     id: `m-${Date.now()}`,
@@ -476,16 +478,16 @@ export async function submitSettlement(payload: {
   }
 
   const cached = getCachedState();
-  const variance = parseFloat((payload.actualCash - payload.expectedCash).toFixed(2));
+  const varianceCalc = calculateSettlementVariance(payload.actualCash, payload.expectedCash);
   const settlement: Settlement = {
     id: `set-${Date.now()}`,
     storeId: payload.storeId,
     riderId: payload.riderId,
     riderName: payload.riderName,
-    expectedCash: payload.expectedCash,
-    actualCash: payload.actualCash,
-    variance,
-    status: payload.status || (variance === 0 ? 'approved' : 'disputed'),
+    expectedCash: varianceCalc.safeExpected,
+    actualCash: varianceCalc.safeActual,
+    variance: varianceCalc.variance,
+    status: payload.status || (varianceCalc.isDisputed ? 'disputed' : 'approved'),
     notes: payload.notes || '',
     updatedAt: new Date().toISOString(),
   };
@@ -573,49 +575,34 @@ export async function settleCustomerKhata(
   );
   const isFull = payload.fullSettlement === true;
   const numericAmount = payload.amount !== undefined && !isNaN(Number(payload.amount)) ? Number(payload.amount) : 0;
-  let remaining = isFull ? totalOutstanding : numericAmount;
-  const totalSettled = parseFloat(Math.min(remaining, totalOutstanding).toFixed(2));
-  const settledOrderIds: string[] = [];
+  const amountToSettle = isFull ? totalOutstanding : numericAmount;
+
+  const result = executeKhataSettlement(totalOutstanding, amountToSettle, [...khataOrders].reverse());
 
   // Add credit transaction to cached ledger
-  if (totalSettled > 0) {
+  if (result.settledAmount > 0) {
     cached.khataTransactions.unshift({
       id: `kt-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`,
       customerId: id,
       customerPhone: customer?.phone,
       storeId: payload.storeId,
       type: 'credit',
-      amount: totalSettled,
+      amount: result.settledAmount,
       timestamp: new Date().toISOString(),
       note: payload.note || 'Cash settlement at counter',
     });
   }
 
-  for (const order of [...khataOrders].reverse()) {
-    if (remaining <= 0) break;
-    const orderPaid = order.paidAmount || 0;
-    const orderDebt = Math.max(0, order.total - orderPaid);
-
-    if (orderDebt <= 0) {
-      order.paymentStatus = 'paid';
-      continue;
-    }
-
-    if (remaining >= orderDebt) {
-      order.paidAmount = order.total;
-      order.paymentStatus = 'paid';
-      settledOrderIds.push(order.id);
-      remaining -= orderDebt;
-    } else {
-      order.paidAmount = parseFloat((orderPaid + remaining).toFixed(2));
-      order.paymentStatus = 'khata_debited';
-      settledOrderIds.push(order.id);
-      remaining = 0;
-      break;
+  for (const update of result.updatedOrders) {
+    const ord = cached.orders.find((o) => o.id === update.id);
+    if (ord) {
+      ord.paidAmount = update.paidAmount;
+      ord.paymentStatus = update.paymentStatus;
     }
   }
+
   saveCachedState(cached);
-  return { success: true, settledAmount: totalSettled, settledOrderIds };
+  return { success: true, settledAmount: result.settledAmount, settledOrderIds: result.settledOrderIds };
 }
 
 export async function updateStore(id: string, payload: Partial<Store>): Promise<Store> {

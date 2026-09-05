@@ -23,6 +23,7 @@ import {
 import { Product, CustomerProfile, Store, Language } from '../types';
 import { useOfflineSync } from '../lib/useOfflineSync';
 import { calculateCustomerKhataBalance } from '../khataUtils';
+import { Decimal, toDecimal, toMoneyNumber, calculateOrderFinancials } from '../utils/money';
 import { CameraBarcodeScanner } from './CameraBarcodeScanner';
 import { notifyError } from '../utils/errorHandler';
 
@@ -140,13 +141,17 @@ export const OfflineCounterOrderModal: React.FC<Props> = ({
     };
   });
 
-  const subtotal = cartItemsList.reduce((sum: number, item) => sum + (Number(item.price) * Number(item.quantity)), 0);
+  const { subtotal } = calculateOrderFinancials(cartItemsList);
   const total = subtotal;
 
   // Khata over-limit calculations
-  const projectedBalance = currentKhataBalance + total;
-  const isKhataOverLimit = paymentMethod === 'khata' && projectedBalance > currentCreditLimit;
-  const overLimitAmount = Math.max(0, projectedBalance - currentCreditLimit);
+  const currentBalDec = toDecimal(currentKhataBalance);
+  const totalDec = toDecimal(total);
+  const creditLimitDec = toDecimal(currentCreditLimit);
+  const projectedBalDec = currentBalDec.plus(totalDec);
+  const isKhataOverLimit = paymentMethod === 'khata' && projectedBalDec.greaterThan(creditLimitDec);
+  const overLimitAmount = toMoneyNumber(Decimal.max(0, projectedBalDec.minus(creditLimitDec)));
+  const projectedBalance = toMoneyNumber(projectedBalDec);
 
   if (!isOpen) return null;
 

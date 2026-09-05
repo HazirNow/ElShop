@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { CustomerProfile, Order, Store, Language, KhataTransaction } from '../types';
 import { calculateCustomerKhataBalance } from '../khataUtils';
+import { Decimal, toDecimal, toMoneyNumber } from '../utils/money';
 import { ElShopLogo } from './ElShopLogo';
 
 interface BatchKhataSettlementModalProps {
@@ -60,7 +61,9 @@ export const BatchKhataSettlementModal: React.FC<BatchKhataSettlementModalProps>
     })
     .filter((item) => item.balance > 0);
 
-  const totalOutstanding = customerLedgers.reduce((sum, item) => sum + item.balance, 0);
+  const totalOutstanding = toMoneyNumber(
+    customerLedgers.reduce((sum, item) => sum.plus(toDecimal(item.balance)), new Decimal(0))
+  );
 
   const handleSendStatement = (item: typeof customerLedgers[0]) => {
     const cleanPhone = item.customer.phone.replace(/[^0-9]/g, '');

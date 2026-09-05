@@ -14,6 +14,7 @@ import {
   getCachedState
 } from '../api';
 import { Order, Product, CustomerProfile, KhataTransaction } from '../types';
+import { calculateOrderFinancials, toMoneyNumber } from '../utils/money';
 
 export interface OfflineSyncLoopSummary {
   timestamp: string;
@@ -246,9 +247,7 @@ class OfflineSyncManager {
         offlineDb.customers
       ], async () => {
         if (actionType === 'CREATE_ORDER') {
-          const subtotal = (payload.items || []).reduce((acc: number, item: any) => acc + (Number(item.price) || 0) * (Number(item.quantity) || 1), 0);
-          const deliveryFee = subtotal < 25 ? 3.5 : 0;
-          const total = subtotal + deliveryFee;
+          const { subtotal, deliveryFee, total } = calculateOrderFinancials(payload.items || []);
           const newId = payload.id || `ELS-${1000 + (cached.orders?.length || 0) + 1}`;
 
           const newOrder: Order = {
@@ -260,9 +259,9 @@ class OfflineSyncManager {
             building: payload.building || 'Princess Tower',
             unit: payload.unit || 'Apt 101',
             items: payload.items || [],
-            subtotal: parseFloat(subtotal.toFixed(2)),
-            deliveryFee: parseFloat(deliveryFee.toFixed(2)),
-            total: parseFloat(total.toFixed(2)),
+            subtotal,
+            deliveryFee,
+            total,
             paymentMethod: payload.paymentMethod || 'cash',
             paymentStatus: payload.paymentMethod === 'card' ? 'paid' : payload.paymentMethod === 'khata' ? 'khata_debited' : 'pending',
             status: 'placed',
@@ -347,7 +346,7 @@ class OfflineSyncManager {
             customerPhone: payload.customerPhone,
             storeId: payload.storeId || storeId,
             type: 'credit',
-            amount: payload.amount,
+            amount: toMoneyNumber(payload.amount),
             timestamp: new Date().toISOString(),
             note: payload.note || 'Offline Cash Settlement',
           };

@@ -373,8 +373,12 @@ app.post('/api/orders', async (req, res) => {
 
     res.status(201).json(result.order);
   } catch (error: any) {
-    console.error('[API /api/orders] Error:', error);
-    const status = error.statusCode || 500;
+    const status = error.statusCode || (error.message?.includes('not found') ? 404 : (error.message?.includes('expired') || error.message?.includes('stock') || error.message?.includes('Khata') ? 400 : 500));
+    if (status < 500) {
+      console.warn(`[API /api/orders] Client validation rejected (${status}):`, error.message);
+    } else {
+      console.error('[API /api/orders] Internal Server Error:', error);
+    }
     res.status(status).json({
       error: error.message || 'Failed to create order',
       details: error.details,
