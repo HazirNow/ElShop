@@ -998,3 +998,27 @@ export function superadminAuthMiddleware(req: any, res: any, next?: any) {
   }
 }
 
+export interface HealthStatusResponse {
+  status: string;
+  time: string;
+  database?: string;
+  poolState?: any;
+  latencyMs?: number;
+}
+
+export async function checkHealthApi(): Promise<HealthStatusResponse> {
+  const start = performance.now();
+  try {
+    const res = await safeFetch('/api/health');
+    const latencyMs = Math.round(performance.now() - start);
+    if (!res.ok) {
+      return { status: 'error', time: new Date().toISOString(), latencyMs };
+    }
+    const data = await res.json();
+    return { ...data, latencyMs };
+  } catch (err: any) {
+    const latencyMs = Math.round(performance.now() - start);
+    return { status: 'error', time: new Date().toISOString(), latencyMs, database: 'In-Memory / Local' };
+  }
+}
+

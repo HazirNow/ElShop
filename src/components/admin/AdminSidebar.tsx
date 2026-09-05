@@ -11,12 +11,13 @@ import {
   ShieldCheck, 
   X,
   Menu,
-  Activity
+  Activity,
+  Rocket
 } from 'lucide-react';
 import { ElShopLogo } from '../ElShopLogo';
 import { Language } from '../../types';
 
-export type AdminTab = 'dashboard' | 'stores' | 'users' | 'billing' | 'settings' | 'audit';
+export type AdminTab = 'dashboard' | 'stores' | 'users' | 'billing' | 'settings' | 'audit' | 'readiness';
 
 interface AdminSidebarProps {
   activeTab: AdminTab;
@@ -79,6 +80,14 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       labelAr: 'سجل التدقيق والأمان',
       icon: FileText,
       badge: 'Live',
+      badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
+    },
+    {
+      id: 'readiness' as AdminTab,
+      labelEn: 'Go-Live Readiness',
+      labelAr: 'جاهزية الإطلاق المباشر',
+      icon: Rocket,
+      badge: 'Sept 9',
       badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
     },
   ];

@@ -40,7 +40,8 @@ import {
   Menu,
   Sliders,
   SlidersHorizontal,
-  Info
+  Info,
+  Rocket
 } from 'lucide-react';
 import { AppState, Store, Language, Order } from '../types';
 import { updateAdminConfig, createStore, updateStore, sendStorePaymentReminder } from '../api';
@@ -56,6 +57,7 @@ import { AdminBillingView } from './admin/AdminBillingView';
 import { AdminAuditLogs, AuditLogEntry } from './admin/AdminAuditLogs';
 import { AdminKpiSkeleton, AdminTableSkeleton } from './admin/AdminSkeletonLoaders';
 import { AdminAnalyticsCharts } from './admin/AdminAnalyticsCharts';
+import { GoLiveReadinessWidget } from './admin/GoLiveReadinessWidget';
 
 interface AdminDashboardProps {
   state: AppState;
@@ -485,13 +487,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       </p>
                     </div>
 
-                    <button
-                      onClick={() => setShowCreateStoreModal(true)}
-                      className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-lg shadow-indigo-950 flex items-center justify-center gap-2 transition-all active:scale-95 shrink-0"
-                    >
-                      <PlusCircle className="w-4 h-4" />
-                      <span>{isRtl ? 'إضافة متجر جديد' : 'Onboard New Store'}</span>
-                    </button>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <button
+                        onClick={() => setActiveTab('readiness')}
+                        className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold text-xs sm:text-sm px-3.5 py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 shrink-0"
+                      >
+                        <Rocket className="w-4 h-4 text-emerald-400" />
+                        <span>{isRtl ? 'جاهزية الإطلاق (9 سبتمبر)' : 'Go-Live Readiness (Sept 9)'}</span>
+                      </button>
+
+                      <button
+                        onClick={() => setShowCreateStoreModal(true)}
+                        className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-lg shadow-indigo-950 flex items-center justify-center gap-2 transition-all active:scale-95 shrink-0"
+                      >
+                        <PlusCircle className="w-4 h-4" />
+                        <span>{isRtl ? 'إضافة متجر جديد' : 'Onboard New Store'}</span>
+                      </button>
+                    </div>
                   </div>
 
                   {/* 4 Core KPI Cards */}
@@ -553,6 +565,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       </div>
                     </div>
                   </div>
+
+                  {/* September 9 Go-Live Readiness Verification Widget */}
+                  <GoLiveReadinessWidget
+                    state={state}
+                    lang={currentLang}
+                    onNavigateToTab={(t) => setActiveTab(t as AdminTab)}
+                  />
 
                   {/* Integrated Recharts: Daily Revenue Trend & Store Subscription Distribution */}
                   <AdminAnalyticsCharts
@@ -892,6 +911,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       </button>
                     </div>
                   </div>
+                </motion.div>
+              )}
+
+              {/* TAB 7: GO-LIVE READINESS DASHBOARD */}
+              {activeTab === 'readiness' && (
+                <motion.div
+                  key="readiness"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.18 }}
+                  className="space-y-6"
+                  id="admin-readiness-view"
+                >
+                  <GoLiveReadinessWidget
+                    state={state}
+                    lang={currentLang}
+                    onNavigateToTab={(t) => setActiveTab(t as AdminTab)}
+                  />
                 </motion.div>
               )}
             </AnimatePresence>
